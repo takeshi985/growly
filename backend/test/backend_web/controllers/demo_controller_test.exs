@@ -68,6 +68,15 @@ defmodule BackendWeb.DemoControllerTest do
     assert Enum.count(LazyHTML.query(document, "#diagnostic-start-form")) == 1
   end
 
+  test "GET curriculum and workbook demos show the product ecosystem", %{conn: conn} do
+    curriculum = conn |> get(~p"/demo/curriculum") |> document()
+    assert Enum.count(LazyHTML.query(curriculum, "#curriculum-demo-map")) == 1
+
+    workbook = conn |> get(~p"/demo/workbook") |> document()
+    assert Enum.count(LazyHTML.query(workbook, "#workbook-demo-pages")) == 1
+    assert LazyHTML.text(workbook) =~ "Growly: первые шаги"
+  end
+
   test "POST /demo/diagnostic/start shows the first diagnostic task", %{conn: conn} do
     document = conn |> post(~p"/demo/diagnostic/start") |> document()
 

@@ -34,6 +34,18 @@ and include learning session, answer submission, parent progress, and initial
 diagnostic flows. Child-facing task payloads never expose `correct_answer` or
 staged hints.
 
+## Curriculum and workbook routes
+
+- `/demo/curriculum` — demo child lesson map;
+- `/demo/workbook` — workbook pages and QR links;
+- `/admin/content/courses`, `/units`, `/lessons` — curriculum admin;
+- `/admin/content/workbooks`, `/workbook_pages` — workbook admin;
+- `/admin/content/export` — JSON content-pack export;
+- `/qr/:token` — safe workbook QR browser fallback.
+
+Run quality checks with `mix format --check-formatted`, `mix test`, or the full
+`mix precommit` alias.
+
 Ready to run in production? Please [check our deployment guides](https://phoenix.hexdocs.pm/deployment.html).
 
 ## Learn more

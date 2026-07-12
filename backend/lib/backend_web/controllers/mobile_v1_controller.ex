@@ -2,7 +2,42 @@ defmodule BackendWeb.MobileV1Controller do
   use BackendWeb, :controller
 
   alias Backend.Learning
+  alias Backend.Content
   alias BackendWeb.MobileV1JSON
+
+  def catalog(conn, _params) do
+    json(conn, MobileV1JSON.catalog(Content.list_published_courses_with_curriculum()))
+  end
+
+  def course(conn, %{"course_id" => course_id}) do
+    course = Content.get_published_course_with_curriculum!(course_id)
+    json(conn, MobileV1JSON.course(course))
+  end
+
+  def course_map(conn, %{"course_id" => course_id}) do
+    course = Content.get_published_course_with_curriculum!(course_id)
+    json(conn, MobileV1JSON.course_map(course))
+  end
+
+  def lesson(conn, %{"lesson_id" => lesson_id}) do
+    lesson = Content.get_lesson_with_content!(lesson_id)
+    json(conn, MobileV1JSON.lesson(lesson))
+  end
+
+  def lesson_map(conn, %{"child_id" => child_id}) do
+    case Learning.lesson_map_for_child(child_id) do
+      {:ok, lesson_map} ->
+        json(conn, MobileV1JSON.lesson_map(lesson_map))
+
+      {:error, :child_profile_not_found} ->
+        child_not_found(conn)
+
+      {:error, :no_published_course} ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{errors: %{course: ["no published course available"]}})
+    end
+  end
 
   def session(conn, %{"child_id" => child_id}) do
     case Learning.learning_session_for_child(child_id) do

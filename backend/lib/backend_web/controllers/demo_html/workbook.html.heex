@@ -1,0 +1,28 @@
+<Layouts.app flash={@flash}>
+  <nav><a href={~p"/demo"} class="font-bold text-slate-500">← К демо</a></nav>
+  <header class="rounded-[2rem] bg-gradient-to-br from-amber-500 to-orange-400 p-8 text-white shadow-xl">
+    <p class="text-sm font-black uppercase tracking-[0.2em] text-amber-100">Paper + digital</p><h1
+      id="workbook-demo-heading"
+      class="mt-3 text-4xl font-black"
+    >
+      {@workbook.title}
+    </h1><p class="mt-3 max-w-2xl text-lg text-white/90">
+      Бумажные страницы связываются с уроками Growly через безопасные QR-token.
+    </p>
+  </header>
+  <section id="workbook-demo-pages" class="grid gap-5 lg:grid-cols-3">
+    <article
+      :for={page <- @pages}
+      class="rounded-3xl border border-amber-100 bg-white p-6 shadow-sm"
+    >
+      <div class="flex size-12 items-center justify-center rounded-2xl bg-amber-100 text-2xl">
+        📄
+      </div><p class="mt-4 text-sm font-bold text-amber-700">Страница {page.page_number}</p><h2 class="mt-1 text-xl font-black text-slate-900">
+        {page.title}
+      </h2><code class="mt-4 block break-all rounded-xl bg-slate-100 p-3 text-xs text-slate-600">/qr/{page.qr_code_token}</code><a
+        href={~p"/qr/#{page.qr_code_token}"}
+        class="mt-4 inline-flex rounded-xl bg-amber-500 px-4 py-3 font-black text-white"
+      >Открыть QR landing</a>
+    </article>
+  </section>
+</Layouts.app>

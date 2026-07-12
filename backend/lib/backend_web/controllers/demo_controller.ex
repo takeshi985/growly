@@ -44,6 +44,19 @@ defmodule BackendWeb.DemoController do
     end
   end
 
+  def curriculum(conn, _params) do
+    with {:ok, demo} <- Demo.ensure_data(),
+         {:ok, lesson_map} <- Learning.lesson_map_for_child(demo.child.id) do
+      render(conn, :curriculum, lesson_map: lesson_map)
+    end
+  end
+
+  def workbook(conn, _params) do
+    with {:ok, demo} <- Demo.ensure_data() do
+      render(conn, :workbook, workbook: demo.workbook, pages: demo.workbook_pages)
+    end
+  end
+
   def reset(conn, _params) do
     with {:ok, _demo} <- Demo.reset_progress() do
       conn

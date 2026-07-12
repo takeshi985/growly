@@ -1,0 +1,51 @@
+<Layouts.app flash={@flash}>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <a href={~p"/admin/content"} class="font-bold text-slate-500">← Content Admin</a><h1
+        id={"admin-#{@resource}-heading"}
+        class="mt-3 text-4xl font-black text-slate-900"
+      >
+        {title(@resource)}
+      </h1>
+    </div>
+    <a
+      id={"new-#{@resource}-link"}
+      href={new_path(@resource)}
+      class="rounded-2xl bg-violet-600 px-5 py-3 font-black text-white"
+    >+ Новый {singular(@resource)}</a>
+  </div>
+  <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+    <span class="font-black">No authentication yet.</span> Internal MVP only.
+  </div>
+  <section
+    :if={@records == []}
+    id="curriculum-empty-state"
+    class="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center"
+  >
+    <div class="text-5xl">📚</div><h2 class="mt-4 text-2xl font-black">Пока нет записей</h2>
+  </section>
+  <section :if={@records != []} id={"admin-#{@resource}-list"} class="grid gap-4 lg:grid-cols-2">
+    <article
+      :for={record <- @records}
+      id={"admin-#{@resource}-#{record.id}"}
+      class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+    >
+      <h2 class="text-xl font-black text-slate-900">{record_title(@resource, record)}</h2><p class="mt-2 text-sm font-semibold text-slate-500">
+        {record_meta(@resource, record)}
+      </p>
+      <div class="mt-5 flex gap-2">
+        <a
+          href={edit_path(@resource, record)}
+          class="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700"
+        >Изменить</a><.form
+          for={@delete_form}
+          id={"delete-#{@resource}-#{record.id}"}
+          action={record_path(@resource, record)}
+          method="delete"
+        >
+          <button type="submit" class="rounded-xl px-4 py-2 text-sm font-bold text-rose-600">Удалить</button>
+        </.form>
+      </div>
+    </article>
+  </section>
+</Layouts.app>

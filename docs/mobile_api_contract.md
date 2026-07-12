@@ -11,6 +11,18 @@ The Android emulator uses `10.0.2.2` to reach the development machine.
 
 ## Endpoints
 
+### Curriculum catalog and lesson map
+
+- `GET /api/mobile/v1/catalog`
+- `GET /api/mobile/v1/courses/:course_id`
+- `GET /api/mobile/v1/courses/:course_id/map`
+- `GET /api/mobile/v1/lessons/:lesson_id`
+- `GET /api/mobile/v1/children/:child_id/lesson_map`
+
+Only published courses are listed. Lesson task payloads include question,
+options, difficulty, and position but never `correct_answer`. Child lesson
+statuses are `available`, `in_progress`, `needs_review`, or `completed`.
+
 ### Learning session
 
 `GET /api/mobile/v1/children/:child_id/session`
@@ -71,3 +83,7 @@ learning route.
 Parent authentication will be added later. A child profile will be selected
 after parent login. Collect the minimum child data required for learning, and
 do not add advertising or third-party tracking to child mode.
+
+Workbook QR links currently use the safe browser fallback `/qr/:token`. Future
+Flutter builds may register `growly://workbook/:token` after authenticated child
+context is available.
