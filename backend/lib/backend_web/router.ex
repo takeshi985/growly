@@ -18,6 +18,10 @@ defmodule BackendWeb.Router do
     pipe_through(:browser)
 
     get("/", PageController, :home)
+    get("/demo", DemoController, :index)
+    get("/demo/child", DemoController, :child)
+    post("/demo/child/answer", DemoController, :answer)
+    get("/demo/parent", DemoController, :parent)
   end
 
   # Other scopes may use custom stacks.
