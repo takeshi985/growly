@@ -15,10 +15,22 @@ defmodule Backend.DemoTest do
     assert second.child.id == first.child.id
     assert Enum.map(second.skills, & &1.id) == Enum.map(first.skills, & &1.id)
     assert Enum.map(second.tasks, & &1.id) == Enum.map(first.tasks, & &1.id)
+    assert second.course.id == first.course.id
+    assert second.workbook.id == first.workbook.id
+
+    assert Enum.map(second.workbook_pages, & &1.id) ==
+             Enum.map(first.workbook_pages, & &1.id)
+
     assert Enum.sort(Enum.uniq(Enum.map(first.skills, & &1.area))) == ["logic", "math", "reading"]
     assert first.parent.email == "demo-parent@growly.local"
     assert length(first.skills) == 12
     assert length(first.tasks) == 12
+    assert first.course.slug == "school-readiness-5-7"
+    assert length(first.units) == 3
+    assert length(first.lessons) == 4
+    assert first.workbook.slug == "growly-first-steps"
+    assert length(first.workbook_pages) == 3
+    assert Enum.all?(first.workbook_pages, &is_binary(&1.qr_code_token))
   end
 
   test "reset_progress/0 deletes only the demo child's learning progress" do

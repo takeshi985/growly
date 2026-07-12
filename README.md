@@ -57,6 +57,16 @@ Mobile API documentation is available at:
 http://localhost:4000/admin/api-docs
 ```
 
+Product ecosystem demos:
+
+- `http://localhost:4000/demo/curriculum`
+- `http://localhost:4000/demo/workbook`
+- `http://localhost:4000/qr/:token`
+
+Content Admin now manages courses, units, lessons, skills, tasks, workbooks,
+and workbook pages. Current content can be exported from
+`http://localhost:4000/admin/content/export`.
+
 The versioned Flutter-ready endpoints live under `/api/mobile/v1`. See
 [`docs/mobile_api_contract.md`](docs/mobile_api_contract.md) for request and
 response rules, Android emulator setup, child feedback behavior, and privacy

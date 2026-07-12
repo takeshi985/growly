@@ -205,6 +205,89 @@ defmodule Backend.Learning do
     end
   end
 
+  @doc "Returns the first published course map enriched with child-specific lesson progress."
+  def lesson_map_for_child(child_profile_id) do
+    with {:ok, child} <- fetch_child_profile(child_profile_id) do
+      case Backend.Content.list_published_courses_with_curriculum() do
+        [] -> {:error, :no_published_course}
+        [course | _rest] -> {:ok, build_child_lesson_map(child, course)}
+      end
+    end
+  end
+
+  defp build_child_lesson_map(child, course) do
+    task_ids = for unit <- course.units, lesson <- unit.lessons, task <- lesson.tasks, do: task.id
+
+    attempts =
+      if task_ids == [] do
+        []
+      else
+        Repo.all(
+          from attempt in TaskAttempt,
+            where: attempt.child_profile_id == ^child.id and attempt.task_id in ^task_ids
+        )
+      end
+
+    units =
+      Enum.map(course.units, fn unit ->
+        lessons = Enum.map(unit.lessons, &lesson_progress(&1, attempts))
+
+        %{
+          id: unit.id,
+          title: unit.title,
+          slug: unit.slug,
+          area: unit.area,
+          sort_order: unit.sort_order,
+          lessons: lessons
+        }
+      end)
+
+    %{child: %{id: child.id, name: child.name, age: child.age}, course: course, units: units}
+  end
+
+  defp lesson_progress(lesson, attempts) do
+    task_ids = MapSet.new(Enum.map(lesson.tasks, & &1.id))
+    lesson_attempts = Enum.filter(attempts, &MapSet.member?(task_ids, &1.task_id))
+
+    completed_ids =
+      lesson_attempts
+      |> Enum.filter(& &1.is_correct)
+      |> Enum.map(& &1.task_id)
+      |> MapSet.new()
+
+    review_ids =
+      lesson_attempts
+      |> Enum.group_by(& &1.task_id)
+      |> Enum.filter(fn {_task_id, task_attempts} ->
+        not Enum.any?(task_attempts, & &1.is_correct) and
+          Enum.count(task_attempts, &(not &1.is_correct)) >= 3
+      end)
+
+    total_tasks = MapSet.size(task_ids)
+    completed_tasks = MapSet.size(completed_ids)
+
+    status =
+      cond do
+        total_tasks > 0 and completed_tasks == total_tasks -> :completed
+        review_ids != [] -> :needs_review
+        lesson_attempts != [] -> :in_progress
+        true -> :available
+      end
+
+    %{
+      id: lesson.id,
+      title: lesson.title,
+      slug: lesson.slug,
+      objective: lesson.objective,
+      skill_id: lesson.skill_id,
+      sort_order: lesson.sort_order,
+      status: status,
+      completed_tasks: completed_tasks,
+      total_tasks: total_tasks,
+      completion_percentage: percentage(completed_tasks, total_tasks)
+    }
+  end
+
   @doc """
   Returns a parent-friendly progress report for a child.
 

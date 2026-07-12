@@ -94,7 +94,8 @@ defmodule BackendWeb.Admin.TaskController do
       action: action,
       task: task,
       form: Phoenix.Component.to_form(changeset),
-      skill_options: Enum.map(skills, &{"#{area_label(&1.area)} · #{&1.title}", &1.id})
+      skill_options: Enum.map(skills, &{"#{area_label(&1.area)} · #{&1.title}", &1.id}),
+      lesson_options: Enum.map(Content.list_lessons(), &{"#{&1.unit.title} · #{&1.title}", &1.id})
     )
   end
 

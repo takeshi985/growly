@@ -32,6 +32,31 @@
     <span class="font-black">Важно:</span> Internal MVP tool. Authentication will be added later.
   </div>
 
+  <nav
+    id="content-admin-navigation"
+    class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-3"
+  >
+    <a
+      :for={
+        {label, path} <- [
+          {"Courses", ~p"/admin/content/courses"},
+          {"Units", ~p"/admin/content/units"},
+          {"Lessons", ~p"/admin/content/lessons"},
+          {"Skills", ~p"/admin/content/skills"},
+          {"Tasks", ~p"/admin/content/tasks"},
+          {"Workbooks", ~p"/admin/content/workbooks"},
+          {"Workbook pages", ~p"/admin/content/workbook_pages"}
+        ]
+      }
+      href={path}
+      class="rounded-xl bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700"
+    >{label}</a>
+    <a
+      href={~p"/admin/content/export"}
+      class="rounded-xl bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700"
+    >Export JSON</a>
+  </nav>
+
   <section id="content-admin-summary" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
     <.metric label="Всего навыков" value={@summary.total_skills} tone="violet" />
     <.metric label="Всего заданий" value={@summary.total_tasks} tone="sky" />

@@ -29,6 +29,14 @@
         prompt="Выберите навык"
         options={@skill_options}
       />
+      <.input
+        field={@form[:lesson_id]}
+        type="select"
+        label="Урок (необязательно)"
+        prompt="Без урока"
+        options={@lesson_options}
+      />
+      <.input field={@form[:position]} type="number" label="Позиция в уроке" min="0" />
       <div class="grid gap-5 sm:grid-cols-2">
         <.input
           field={@form[:type]}

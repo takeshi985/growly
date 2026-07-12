@@ -10,6 +10,11 @@ defmodule Backend.Demo do
   alias Backend.Content
   alias Backend.Content.Skill
   alias Backend.Content.Task
+  alias Backend.Content.Course
+  alias Backend.Content.Lesson
+  alias Backend.Content.Unit
+  alias Backend.Content.Workbook
+  alias Backend.Content.WorkbookPage
   alias Backend.Learning
   alias Backend.Learning.ChildProfile
   alias Backend.Learning.DiagnosticSession
@@ -194,7 +199,9 @@ defmodule Backend.Demo do
   def ensure_data do
     with {:ok, parent} <- ensure_parent(),
          {:ok, child} <- ensure_child(parent),
-         {:ok, records} <- ensure_content() do
+         {:ok, records} <- ensure_content(),
+         {:ok, curriculum} <- ensure_curriculum(records),
+         {:ok, workbook} <- ensure_workbook(curriculum) do
       first = List.first(records)
 
       {:ok,
@@ -204,7 +211,12 @@ defmodule Backend.Demo do
          skill: first.skill,
          task: first.task,
          skills: Enum.map(records, & &1.skill),
-         tasks: Enum.map(records, & &1.task)
+         tasks: Enum.map(records, & &1.task),
+         course: curriculum.course,
+         units: curriculum.units,
+         lessons: curriculum.lessons,
+         workbook: workbook.workbook,
+         workbook_pages: workbook.pages
        }}
     end
   end
@@ -273,6 +285,171 @@ defmodule Backend.Demo do
     case Repo.get_by(Task, skill_id: skill.id, question: attrs.question) do
       nil -> Content.create_task(Map.put(attrs, :skill_id, skill.id))
       task -> {:ok, task}
+    end
+  end
+
+  defp ensure_curriculum(records) do
+    with {:ok, course} <- ensure_course(),
+         {:ok, math_unit} <- ensure_unit(course, "Счёт", "math", 1),
+         {:ok, reading_unit} <- ensure_unit(course, "Чтение", "reading", 2),
+         {:ok, logic_unit} <- ensure_unit(course, "Логика", "logic", 3),
+         {:ok, math_lesson} <-
+           ensure_lesson(
+             math_unit,
+             records,
+             "Счёт предметов до 10",
+             "count-to-10",
+             "Считает предметы до 10",
+             1
+           ),
+         {:ok, compare_lesson} <-
+           ensure_lesson(
+             math_unit,
+             records,
+             "Больше и меньше",
+             "compare-numbers",
+             "Сравнивает больше и меньше",
+             2
+           ),
+         {:ok, reading_lesson} <-
+           ensure_lesson(
+             reading_unit,
+             records,
+             "Буквы и слоги",
+             "letters-and-syllables",
+             "Узнаёт буквы",
+             1
+           ),
+         {:ok, logic_lesson} <-
+           ensure_lesson(
+             logic_unit,
+             records,
+             "Лишний предмет",
+             "odd-one-out",
+             "Находит лишний предмет",
+             1
+           ) do
+      {:ok,
+       %{
+         course: course,
+         units: [math_unit, reading_unit, logic_unit],
+         lessons: [math_lesson, compare_lesson, reading_lesson, logic_lesson]
+       }}
+    end
+  end
+
+  defp ensure_course do
+    attrs = %{
+      title: "Подготовка к школе 5–7",
+      slug: "school-readiness-5-7",
+      description: "Короткая программа по счёту, чтению и логике.",
+      age_min: 5,
+      age_max: 7,
+      is_published: true,
+      sort_order: 1
+    }
+
+    case Repo.get_by(Course, slug: attrs.slug) do
+      nil -> Content.create_course(attrs)
+      course -> {:ok, course}
+    end
+  end
+
+  defp ensure_unit(course, title, area, sort_order) do
+    attrs = %{
+      course_id: course.id,
+      title: title,
+      slug: area,
+      description: "Учебный блок Growly: #{title}.",
+      area: area,
+      sort_order: sort_order
+    }
+
+    case Repo.get_by(Unit, course_id: course.id, slug: area) do
+      nil -> Content.create_unit(attrs)
+      unit -> {:ok, unit}
+    end
+  end
+
+  defp ensure_lesson(unit, records, title, slug, skill_title, sort_order) do
+    record = Enum.find(records, &(&1.skill.title == skill_title))
+
+    attrs = %{
+      unit_id: unit.id,
+      skill_id: record.skill.id,
+      title: title,
+      slug: slug,
+      objective: "Освоить навык «#{skill_title}» маленькими шагами.",
+      explanation: "Короткое объяснение, практика и мягкие подсказки.",
+      sort_order: sort_order,
+      is_published: true
+    }
+
+    with {:ok, lesson} <-
+           (case Repo.get_by(Lesson, unit_id: unit.id, slug: slug) do
+              nil -> Content.create_lesson(attrs)
+              lesson -> {:ok, lesson}
+            end),
+         {:ok, _task} <- Content.update_task(record.task, %{lesson_id: lesson.id, position: 1}) do
+      {:ok, lesson}
+    end
+  end
+
+  defp ensure_workbook(curriculum) do
+    attrs = %{
+      title: "Growly: первые шаги",
+      slug: "growly-first-steps",
+      description: "Бумажная тетрадь, связанная с интерактивными уроками Growly.",
+      age_min: 5,
+      age_max: 7,
+      is_published: true,
+      sort_order: 1
+    }
+
+    with {:ok, workbook} <-
+           (case Repo.get_by(Workbook, slug: attrs.slug) do
+              nil -> Content.create_workbook(attrs)
+              workbook -> {:ok, workbook}
+            end),
+         {:ok, pages} <- ensure_workbook_pages(workbook, curriculum.lessons) do
+      {:ok, %{workbook: workbook, pages: pages}}
+    end
+  end
+
+  defp ensure_workbook_pages(workbook, lessons) do
+    page_specs = [
+      {1, Enum.at(lessons, 0), "Считаем предметы", "growly-math-page-1"},
+      {2, Enum.at(lessons, 2), "Буквы и слоги", "growly-reading-page-2"},
+      {3, Enum.at(lessons, 3), "Ищем лишнее", "growly-logic-page-3"}
+    ]
+
+    Enum.reduce_while(page_specs, {:ok, []}, fn {number, lesson, title, token}, {:ok, pages} ->
+      attrs = %{
+        workbook_id: workbook.id,
+        lesson_id: lesson.id,
+        title: title,
+        page_number: number,
+        instructions: "Выполните бумажное задание, затем откройте связанный урок Growly.",
+        qr_code_token: token,
+        qr_target_type: "lesson",
+        qr_target_id: lesson.id,
+        is_published: true
+      }
+
+      case Repo.get_by(WorkbookPage, qr_code_token: token) do
+        nil ->
+          case Content.create_workbook_page(attrs) do
+            {:ok, page} -> {:cont, {:ok, [page | pages]}}
+            error -> {:halt, error}
+          end
+
+        page ->
+          {:cont, {:ok, [page | pages]}}
+      end
+    end)
+    |> case do
+      {:ok, pages} -> {:ok, Enum.reverse(pages)}
+      error -> error
     end
   end
 end

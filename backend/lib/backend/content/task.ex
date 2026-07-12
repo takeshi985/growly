@@ -2,6 +2,7 @@ defmodule Backend.Content.Task do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Backend.Content.Lesson
   alias Backend.Content.Skill
 
   schema "tasks" do
@@ -14,8 +15,10 @@ defmodule Backend.Content.Task do
     field(:hint2, :string)
     field(:explanation, :string)
     field(:options_text, :string, virtual: true)
+    field(:position, :integer, default: 0)
 
     belongs_to(:skill, Skill)
+    belongs_to(:lesson, Lesson)
 
     timestamps(type: :utc_datetime)
   end
@@ -33,6 +36,8 @@ defmodule Backend.Content.Task do
       :hint2,
       :explanation,
       :options_text,
+      :lesson_id,
+      :position,
       :skill_id
     ])
     |> validate_required([
@@ -47,6 +52,8 @@ defmodule Backend.Content.Task do
       :skill_id
     ])
     |> validate_number(:difficulty, greater_than_or_equal_to: 1)
+    |> validate_number(:position, greater_than_or_equal_to: 0)
     |> foreign_key_constraint(:skill_id)
+    |> foreign_key_constraint(:lesson_id)
   end
 end

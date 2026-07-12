@@ -40,6 +40,26 @@
   <section id="mobile-api-endpoints" class="space-y-4">
     <.endpoint
       method="GET"
+      path="/api/mobile/v1/catalog"
+      purpose="Получить опубликованные курсы и количество разделов и уроков."
+    />
+    <.endpoint
+      method="GET"
+      path="/api/mobile/v1/courses/:course_id/map"
+      purpose="Получить упорядоченную карту разделов и уроков без правильных ответов."
+    />
+    <.endpoint
+      method="GET"
+      path="/api/mobile/v1/lessons/:lesson_id"
+      purpose="Получить урок и child-safe задания для будущего экрана Flutter."
+    />
+    <.endpoint
+      method="GET"
+      path="/api/mobile/v1/children/:child_id/lesson_map"
+      purpose="Получить карту уроков со статусами конкретного ребёнка."
+    />
+    <.endpoint
+      method="GET"
       path="/api/mobile/v1/children/:child_id/session"
       purpose="Получить ребёнка, следующее задание, сводку прогресса и состояние сессии."
     />

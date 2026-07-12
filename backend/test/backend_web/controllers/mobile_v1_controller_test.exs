@@ -139,6 +139,63 @@ defmodule BackendWeb.MobileV1ControllerTest do
     assert hd(final["result"]["recommended_focus"])["area_label"] == "Счёт"
   end
 
+  test "catalog returns only published courses with curriculum counts", %{conn: conn} do
+    published = curriculum_fixture(%{is_published: true})
+    _draft = curriculum_fixture(%{slug: "draft-course", is_published: false})
+
+    data = conn |> get(~p"/api/mobile/v1/catalog") |> json_response(200) |> Map.fetch!("data")
+
+    assert [%{"id" => id, "units_count" => 1, "lessons_count" => 1}] = data["courses"]
+    assert id == published.course.id
+  end
+
+  test "course and lesson payloads never expose correct_answer", %{conn: conn} do
+    curriculum = curriculum_fixture()
+
+    course_json =
+      conn
+      |> get(~p"/api/mobile/v1/courses/#{curriculum.course.id}/map")
+      |> json_response(200)
+
+    refute inspect(course_json) =~ "correct_answer"
+
+    lesson_json =
+      conn
+      |> get(~p"/api/mobile/v1/lessons/#{curriculum.lesson.id}")
+      |> json_response(200)
+
+    assert hd(lesson_json["data"]["tasks"])["id"] == curriculum.task.id
+    refute inspect(lesson_json) =~ "correct_answer"
+    refute inspect(lesson_json) =~ curriculum.task.correct_answer
+  end
+
+  test "child lesson map changes from available to completed", %{conn: conn} do
+    child = child_profile_fixture(%{age: 6})
+    curriculum = curriculum_fixture()
+
+    available =
+      conn
+      |> get(~p"/api/mobile/v1/children/#{child.id}/lesson_map")
+      |> json_response(200)
+
+    lesson = available["data"]["units"] |> hd() |> Map.fetch!("lessons") |> hd()
+    assert lesson["status"] == "available"
+
+    assert {:ok, _result} =
+             Backend.Learning.submit_task_answer(child.id, curriculum.task.id, %{
+               selected_answer: "right"
+             })
+
+    completed =
+      conn
+      |> get(~p"/api/mobile/v1/children/#{child.id}/lesson_map")
+      |> json_response(200)
+
+    lesson = completed["data"]["units"] |> hd() |> Map.fetch!("lessons") |> hd()
+    assert lesson["status"] == "completed"
+    assert lesson["completion_percentage"] == 100
+  end
+
   defp submit_answer(conn, child_id, task_id, selected_answer) do
     conn
     |> post(~p"/api/mobile/v1/children/#{child_id}/tasks/#{task_id}/answer",
@@ -160,5 +217,47 @@ defmodule BackendWeb.MobileV1ControllerTest do
   defp diagnostic_task_fixture(area, correct_answer) do
     skill = skill_fixture(%{area: area, age_min: 5, age_max: 7})
     task_fixture(%{skill: skill, correct_answer: correct_answer, difficulty: 1})
+  end
+
+  defp curriculum_fixture(overrides \\ %{}) do
+    unique = System.unique_integer([:positive])
+
+    {:ok, course} =
+      Backend.Content.create_course(%{
+        title: "Курс #{unique}",
+        slug: Map.get(overrides, :slug, "course-#{unique}"),
+        description: "Описание",
+        age_min: 5,
+        age_max: 7,
+        is_published: Map.get(overrides, :is_published, true),
+        sort_order: 1
+      })
+
+    {:ok, unit} =
+      Backend.Content.create_unit(%{
+        course_id: course.id,
+        title: "Счёт",
+        slug: "math",
+        description: "Счёт",
+        area: "math",
+        sort_order: 1
+      })
+
+    skill = skill_fixture(%{area: "math", age_min: 5, age_max: 7})
+
+    {:ok, lesson} =
+      Backend.Content.create_lesson(%{
+        unit_id: unit.id,
+        skill_id: skill.id,
+        title: "Считаем",
+        slug: "count",
+        objective: "Считать",
+        explanation: "По одному",
+        sort_order: 1,
+        is_published: true
+      })
+
+    task = task_fixture(%{skill: skill, lesson_id: lesson.id, correct_answer: "right"})
+    %{course: course, unit: unit, lesson: lesson, task: task}
   end
 end

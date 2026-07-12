@@ -2,6 +2,7 @@ defmodule Backend.Content.Skill do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Backend.Content.Lesson
   alias Backend.Content.Task
 
   schema "skills" do
@@ -11,6 +12,7 @@ defmodule Backend.Content.Skill do
     field :age_max, :integer
 
     has_many :tasks, Task
+    has_many :lessons, Lesson
 
     timestamps(type: :utc_datetime)
   end
