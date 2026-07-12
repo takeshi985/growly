@@ -306,4 +306,79 @@ defmodule Backend.LearningTest do
                Learning.submit_task_answer(child_profile.id, -1, %{selected_answer: "right"})
     end
   end
+
+  describe "progress_for_child/1" do
+    alias Backend.Learning.TaskAttempt
+
+    import Backend.ContentFixtures
+    import Backend.LearningFixtures
+
+    test "builds a progress report and recommends skills that need review" do
+      child_profile = child_profile_fixture(%{age: 6})
+      math_skill = skill_fixture(%{title: "Счет предметов", area: "math", age_min: 5, age_max: 7})
+
+      logic_skill =
+        skill_fixture(%{title: "Последовательности", area: "logic", age_min: 5, age_max: 7})
+
+      completed_task = task_fixture(%{skill: math_skill, correct_answer: "right"})
+      deferred_task = task_fixture(%{skill: math_skill, correct_answer: "right"})
+      _not_started_task = task_fixture(%{skill: logic_skill})
+
+      assert {:ok, %TaskAttempt{is_correct: true}} =
+               Learning.create_task_attempt(%{
+                 child_profile_id: child_profile.id,
+                 task_id: completed_task.id,
+                 selected_answer: "right",
+                 hint_used: false
+               })
+
+      for _ <- 1..3 do
+        assert {:ok, %TaskAttempt{is_correct: false}} =
+                 Learning.create_task_attempt(%{
+                   child_profile_id: child_profile.id,
+                   task_id: deferred_task.id,
+                   selected_answer: "left",
+                   hint_used: true
+                 })
+      end
+
+      assert {:ok, progress} = Learning.progress_for_child(child_profile.id)
+
+      assert progress.child == %{id: child_profile.id, name: child_profile.name, age: 6}
+
+      assert progress.summary == %{
+               total_skills: 2,
+               mastered_skills: 0,
+               skills_needing_review: 1,
+               total_tasks: 3,
+               completed_tasks: 1,
+               completion_percentage: 33
+             }
+
+      assert %{
+               status: :needs_review,
+               total_tasks: 2,
+               completed_tasks: 1,
+               completion_percentage: 50,
+               incorrect_attempts_count: 3,
+               hints_used_count: 3,
+               tasks_needing_review_count: 1
+             } = Enum.find(progress.skills, &(&1.id == math_skill.id))
+
+      assert %{status: :not_started, completion_percentage: 0} =
+               Enum.find(progress.skills, &(&1.id == logic_skill.id))
+
+      assert progress.recommendations == [
+               %{
+                 skill_id: math_skill.id,
+                 title: "Повторить: Счет предметов",
+                 message: "В этом навыке ребенку пока нужна дополнительная практика и поддержка."
+               }
+             ]
+    end
+
+    test "returns an error when the child profile does not exist" do
+      assert {:error, :child_profile_not_found} = Learning.progress_for_child(-1)
+    end
+  end
 end
