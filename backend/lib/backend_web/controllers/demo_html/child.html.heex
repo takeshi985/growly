@@ -4,10 +4,23 @@
       href={~p"/demo"}
       class="rounded-xl px-3 py-2 font-bold text-slate-600 transition hover:bg-white"
     >← К демо</a>
-    <a
-      href={~p"/demo/parent"}
-      class="rounded-xl bg-amber-50 px-4 py-2 font-bold text-amber-700 transition hover:bg-amber-100"
-    >Отчёт родителя</a>
+    <div class="flex flex-wrap gap-2">
+      <a
+        href={~p"/demo/parent"}
+        class="rounded-xl bg-amber-50 px-4 py-2 font-bold text-amber-700 transition hover:bg-amber-100"
+      >Отчёт родителя</a>
+      <.form
+        for={Phoenix.Component.to_form(%{}, as: :reset)}
+        id="child-reset-form"
+        action={~p"/demo/reset"}
+        method="post"
+      >
+        <button
+          type="submit"
+          class="rounded-xl bg-slate-100 px-4 py-2 font-bold text-slate-600 hover:bg-slate-200"
+        >Сбросить прогресс</button>
+      </.form>
+    </div>
   </nav>
 
   <header class="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -117,6 +130,12 @@
           >
             Следующее задание уже готово выше ↑
           </p>
+          <a
+            :if={@feedback.action in [:continue, :review_later]}
+            id="continue-child-session"
+            href={~p"/demo/child"}
+            class="mt-4 inline-flex rounded-xl bg-violet-600 px-5 py-3 font-black text-white transition hover:bg-violet-700"
+          >Продолжить</a>
         </div>
       </div>
     </div>

@@ -1,7 +1,6 @@
 defmodule BackendWeb.DemoController do
   use BackendWeb, :controller
 
-  alias Backend.Content
   alias Backend.Demo
   alias Backend.Learning
 
@@ -122,8 +121,9 @@ defmodule BackendWeb.DemoController do
   end
 
   defp render_child(conn, demo, feedback \\ nil, selected_answer \\ nil) do
-    task = next_task(demo.child.id)
-    skill = if task, do: Content.get_skill!(task.skill_id)
+    {:ok, session} = Learning.learning_session_for_child(demo.child.id)
+    task = session.next_task
+    skill = if task, do: task.skill
     hint_used = feedback && feedback.action in [:show_hint1, :show_hint2]
 
     render(conn, :child,
@@ -176,13 +176,6 @@ defmodule BackendWeb.DemoController do
         ),
       options: task_options(task)
     )
-  end
-
-  defp next_task(child_profile_id) do
-    case Learning.next_task_for_child(child_profile_id) do
-      {:ok, task} -> task
-      {:error, :no_task_available} -> nil
-    end
   end
 
   defp task_options(nil), do: []

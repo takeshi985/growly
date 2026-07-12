@@ -16,7 +16,7 @@ defmodule Backend.Demo do
   alias Backend.Learning.TaskAttempt
   alias Backend.Repo
 
-  @demo_parent_email "demo@growly.local"
+  @demo_parent_email "demo-parent@growly.local"
   @demo_child_name "Миша"
 
   @content [
@@ -144,6 +144,48 @@ defmodule Backend.Demo do
         hint1: "Подумай, что мы часто видим на улице зимой.",
         hint2: "Зимой холодно и выпадает снег.",
         explanation: "Снег подходит к зиме: он выпадает в холодную погоду."
+      }
+    },
+    %{
+      area: "math",
+      title: "Вычитает в пределах 10",
+      task: %{
+        type: "multiple_choice",
+        question: "Было 6 кубиков, 2 убрали. Сколько осталось?",
+        options: %{"3" => "3", "4" => "4", "5" => "5"},
+        correct_answer: "4",
+        difficulty: 2,
+        hint1: "Начни с шести и убери два кубика по одному.",
+        hint2: "Шесть минус два — это четыре.",
+        explanation: "Если из 6 убрать 2, останется 4."
+      }
+    },
+    %{
+      area: "reading",
+      title: "Находит первый звук",
+      task: %{
+        type: "multiple_choice",
+        question: "С какого звука начинается слово «мак»?",
+        options: %{"a" => "А", "k" => "К", "m" => "М"},
+        correct_answer: "m",
+        difficulty: 2,
+        hint1: "Произнеси слово медленно: м-м-мак.",
+        hint2: "Первым слышится звук М.",
+        explanation: "Слово «мак» начинается со звука М."
+      }
+    },
+    %{
+      area: "logic",
+      title: "Понимает простую причинно-следственную связь",
+      task: %{
+        type: "multiple_choice",
+        question: "Почему на улице появились лужи?",
+        options: %{"rain" => "Прошёл дождь", "sun" => "Светило солнце", "wind" => "Дул ветер"},
+        correct_answer: "rain",
+        difficulty: 3,
+        hint1: "Подумай, откуда на земле берётся много воды.",
+        hint2: "После дождя вода собирается в углублениях.",
+        explanation: "Лужи появились потому, что прошёл дождь."
       }
     }
   ]

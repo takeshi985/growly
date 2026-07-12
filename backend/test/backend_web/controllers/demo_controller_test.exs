@@ -12,6 +12,12 @@ defmodule BackendWeb.DemoControllerTest do
 
     assert LazyHTML.attribute(LazyHTML.query_by_id(document, "diagnostic-mode-link"), "href") ==
              [~p"/demo/diagnostic"]
+
+    assert LazyHTML.attribute(LazyHTML.query_by_id(document, "content-admin-link"), "href") ==
+             [~p"/admin/content"]
+
+    assert LazyHTML.attribute(LazyHTML.query_by_id(document, "mobile-api-docs-link"), "href") ==
+             [~p"/admin/api-docs"]
   end
 
   test "GET /demo/child creates demo data and renders the next task", %{conn: conn} do
