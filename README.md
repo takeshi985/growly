@@ -10,7 +10,9 @@ for parents.
 - skills and learning tasks;
 - backend-side answer grading;
 - gentle feedback after mistakes: two hints, then deferred repetition;
-- selection of the next age-appropriate task.
+- selection of the next age-appropriate task;
+- browser MVP with child, parent, and diagnostic modes;
+- safe reset of the stable demo child's progress.
 
 ## Repository layout
 
@@ -32,6 +34,23 @@ mix phx.server
 ```
 
 The development server is available at `http://localhost:4000`.
+
+Open the Growly browser prototype at:
+
+```text
+http://localhost:4000/demo
+```
+
+The demo includes:
+
+- a child flow with math, reading, and logic tasks;
+- progressive anti-frustration hints after mistakes;
+- a parent dashboard with per-skill progress and recommendations;
+- a three-area initial diagnostic;
+- a safe reset button that clears only the demo child's progress.
+
+This is the browser MVP used to validate the learning experience before the
+Flutter mobile application and QR-linked paper workbooks are built.
 
 ## Run tests
 

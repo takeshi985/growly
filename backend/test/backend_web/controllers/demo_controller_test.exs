@@ -9,6 +9,9 @@ defmodule BackendWeb.DemoControllerTest do
 
     assert LazyHTML.attribute(LazyHTML.query_by_id(document, "parent-mode-link"), "href") ==
              [~p"/demo/parent"]
+
+    assert LazyHTML.attribute(LazyHTML.query_by_id(document, "diagnostic-mode-link"), "href") ==
+             [~p"/demo/diagnostic"]
   end
 
   test "GET /demo/child creates demo data and renders the next task", %{conn: conn} do
@@ -49,7 +52,56 @@ defmodule BackendWeb.DemoControllerTest do
            |> String.trim() == "Прогресс ребенка: Миша"
 
     assert LazyHTML.text(LazyHTML.query(document, "[id^='parent-skill-']")) =~
-             "Счет предметов до 10"
+             "Считает предметы до 10"
+  end
+
+  test "GET /demo/diagnostic shows the diagnostic introduction", %{conn: conn} do
+    document = conn |> get(~p"/demo/diagnostic") |> document()
+
+    assert Enum.count(LazyHTML.query(document, "#diagnostic-intro")) == 1
+    assert Enum.count(LazyHTML.query(document, "#diagnostic-start-form")) == 1
+  end
+
+  test "POST /demo/diagnostic/start shows the first diagnostic task", %{conn: conn} do
+    document = conn |> post(~p"/demo/diagnostic/start") |> document()
+
+    assert Enum.count(LazyHTML.query(document, "#diagnostic-task")) == 1
+    assert Enum.count(LazyHTML.query(document, "#diagnostic-answer-form")) == 1
+  end
+
+  test "POST /demo/diagnostic/answer advances to the next diagnostic area", %{conn: conn} do
+    assert {:ok, demo} = Backend.Demo.ensure_data()
+
+    assert {:ok, %{session: session, task: %{task: task}}} =
+             Backend.Learning.start_diagnostic(demo.child.id)
+
+    document =
+      conn
+      |> post(~p"/demo/diagnostic/answer",
+        diagnostic: %{
+          session_id: session.id,
+          task_id: task.id,
+          selected_answer: "right"
+        }
+      )
+      |> document()
+
+    assert Enum.count(LazyHTML.query(document, "#diagnostic-task")) == 1
+    assert LazyHTML.text(LazyHTML.query(document, "#diagnostic-task")) =~ "Чтение"
+  end
+
+  test "POST /demo/reset clears demo progress and redirects home", %{conn: conn} do
+    assert {:ok, demo} = Backend.Demo.ensure_data()
+
+    assert {:ok, _result} =
+             Backend.Learning.submit_task_answer(demo.child.id, demo.task.id, %{
+               selected_answer: "left"
+             })
+
+    conn = post(conn, ~p"/demo/reset")
+
+    assert redirected_to(conn) == ~p"/demo"
+    assert Backend.Learning.list_task_attempts() == []
   end
 
   defp document(conn) do

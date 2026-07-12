@@ -1,0 +1,131 @@
+<Layouts.app flash={@flash}>
+  <nav>
+    <a
+      href={~p"/demo"}
+      class="rounded-xl px-3 py-2 font-bold text-slate-600 transition hover:bg-white"
+    >← К демо</a>
+  </nav>
+
+  <header class="rounded-[2rem] bg-gradient-to-br from-emerald-600 to-teal-500 p-7 text-white shadow-xl sm:p-10">
+    <p class="text-sm font-bold uppercase tracking-[0.2em] text-emerald-100">
+      Стартовая диагностика
+    </p>
+    <h1 id="diagnostic-heading" class="mt-3 text-3xl font-black sm:text-4xl">
+      Найдём удобную точку старта для {@child.name}
+    </h1>
+    <p class="mt-4 max-w-2xl text-lg leading-8 text-white/90">
+      Три коротких задания — по математике, чтению и логике. Это не экзамен и здесь нельзя проиграть.
+    </p>
+  </header>
+
+  <section
+    :if={!@diagnostic && !@result}
+    id="diagnostic-intro"
+    class="rounded-3xl border border-emerald-100 bg-white p-7 shadow-sm sm:p-9"
+  >
+    <div class="grid gap-5 sm:grid-cols-3">
+      <div class="rounded-2xl bg-violet-50 p-5 text-center">
+        <div class="text-3xl">🔢</div><p class="mt-2 font-black">Математика</p>
+      </div>
+      <div class="rounded-2xl bg-sky-50 p-5 text-center">
+        <div class="text-3xl">🔤</div><p class="mt-2 font-black">Чтение</p>
+      </div>
+      <div class="rounded-2xl bg-amber-50 p-5 text-center">
+        <div class="text-3xl">🧩</div><p class="mt-2 font-black">Логика</p>
+      </div>
+    </div>
+    <.form
+      for={Phoenix.Component.to_form(%{}, as: :start)}
+      id="diagnostic-start-form"
+      action={~p"/demo/diagnostic/start"}
+      method="post"
+      class="mt-7 text-center"
+    >
+      <button
+        id="diagnostic-start-button"
+        type="submit"
+        class="rounded-2xl bg-emerald-600 px-7 py-4 text-lg font-black text-white shadow-lg shadow-emerald-100 transition hover:-translate-y-0.5 hover:bg-emerald-700"
+      >Начать диагностику</button>
+    </.form>
+  </section>
+
+  <section
+    :if={@task}
+    id="diagnostic-task"
+    class="rounded-3xl border border-emerald-100 bg-white p-7 shadow-sm sm:p-9"
+  >
+    <span class="rounded-full bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">{area_label(
+      @task.area
+    )}</span>
+    <h2 class="mt-6 text-3xl font-black text-slate-900">{@task.task.question}</h2>
+    <.form
+      for={@form}
+      id="diagnostic-answer-form"
+      action={~p"/demo/diagnostic/answer"}
+      method="post"
+      class="mt-7"
+    >
+      <input type="hidden" name={@form[:session_id].name} value={@form[:session_id].value} />
+      <input type="hidden" name={@form[:task_id].name} value={@form[:task_id].value} />
+      <div class="grid gap-3 sm:grid-cols-3">
+        <label
+          :for={{value, label} <- @options}
+          for={"diagnostic-answer-#{value}"}
+          class="cursor-pointer"
+        >
+          <input
+            type="radio"
+            id={"diagnostic-answer-#{value}"}
+            name={@form[:selected_answer].name}
+            value={value}
+            class="peer sr-only"
+          />
+          <span class="flex min-h-20 items-center justify-center rounded-2xl border-2 border-slate-100 bg-slate-50 p-4 text-center text-lg font-black transition hover:border-emerald-200 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:text-emerald-800">{label}</span>
+        </label>
+      </div>
+      <button
+        id="diagnostic-answer-button"
+        type="submit"
+        class="mt-7 rounded-2xl bg-emerald-600 px-7 py-4 font-black text-white transition hover:bg-emerald-700"
+      >Ответить и продолжить</button>
+    </.form>
+  </section>
+
+  <section
+    :if={@result}
+    id="diagnostic-result"
+    class="rounded-3xl border border-emerald-100 bg-white p-7 shadow-sm sm:p-9"
+  >
+    <div class="text-5xl">🧭</div><h2 class="mt-4 text-3xl font-black text-slate-900">
+      Маршрут готов
+    </h2>
+    <p class="mt-2 text-lg text-slate-600">
+      Уверенных областей: {@result.confident_areas} из {@result.total_areas}
+    </p>
+    <div class="mt-7 grid gap-4">
+      <article
+        :for={area <- @result.areas}
+        id={"diagnostic-result-#{area.area}"}
+        class="rounded-2xl bg-slate-50 p-5"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h3 class="font-black text-slate-900">{area_label(area.area)} · {area.skill_title}</h3><span class={
+            diagnostic_result_class(area.result)
+          }>{diagnostic_result_label(area.result)}</span>
+        </div>
+        <p class="mt-3 leading-7 text-slate-600">{area.message}</p>
+      </article>
+    </div>
+    <div :if={@result.recommended_focus != []} class="mt-6 rounded-2xl bg-amber-50 p-5">
+      <p class="font-black text-amber-900">Рекомендуемый фокус</p><p class="mt-1 text-amber-800">
+        Начать с основ: {Enum.map_join(@result.recommended_focus, ", ", &area_label(&1.area))}.
+      </p>
+    </div>
+    <div class="mt-7 flex flex-wrap gap-3">
+      <a href={~p"/demo/child"} class="rounded-2xl bg-violet-600 px-6 py-3 font-black text-white">Перейти к заданиям</a><a
+        href={~p"/demo/parent"}
+        class="rounded-2xl bg-slate-100 px-6 py-3 font-black text-slate-700"
+      >Открыть отчёт</a>
+    </div>
+  </section>
+</Layouts.app>
