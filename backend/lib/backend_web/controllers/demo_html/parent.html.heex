@@ -1,0 +1,76 @@
+<Layouts.app flash={@flash}>
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <p class="text-sm font-semibold text-amber-600">Режим родителя</p>
+      <h1 id="parent-demo-heading" class="text-3xl font-bold tracking-tight text-slate-900">
+        Прогресс ребенка: {@child.name}
+      </h1>
+    </div>
+    <a
+      href={~p"/demo"}
+      class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+    >К демо</a>
+  </div>
+
+  <section class="grid gap-4 sm:grid-cols-3">
+    <div class="rounded-2xl bg-amber-50 p-5">
+      <p class="text-sm font-semibold text-amber-700">Выполнено заданий</p>
+      <p class="mt-2 text-3xl font-bold text-slate-900">
+        {@progress.summary.completed_tasks} / {@progress.summary.total_tasks}
+      </p>
+    </div>
+    <div class="rounded-2xl bg-emerald-50 p-5">
+      <p class="text-sm font-semibold text-emerald-700">Освоено навыков</p>
+      <p class="mt-2 text-3xl font-bold text-slate-900">{@progress.summary.mastered_skills}</p>
+    </div>
+    <div class="rounded-2xl bg-sky-50 p-5">
+      <p class="text-sm font-semibold text-sky-700">Общий прогресс</p>
+      <p class="mt-2 text-3xl font-bold text-slate-900">
+        {@progress.summary.completion_percentage}%
+      </p>
+    </div>
+  </section>
+
+  <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-bold text-slate-900">Навыки</h2>
+    <div class="mt-5 space-y-4">
+      <div
+        :for={skill <- @progress.skills}
+        id={"parent-skill-#{skill.id}"}
+        class="rounded-2xl bg-slate-50 p-4"
+      >
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="font-bold text-slate-900">{skill.title}</h3>
+            <p class="mt-1 text-sm text-slate-600">
+              {skill.completed_tasks} из {skill.total_tasks} заданий выполнено
+            </p>
+          </div>
+          <span class="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-700">{skill.completion_percentage}%</span>
+        </div>
+        <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+          <div
+            class="h-full rounded-full bg-amber-500"
+            style={"width: #{skill.completion_percentage}%"}
+          >
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section
+    :if={@progress.recommendations != []}
+    class="rounded-3xl border border-violet-100 bg-violet-50 p-6"
+  >
+    <h2 class="text-xl font-bold text-slate-900">Что повторить</h2>
+    <p :for={recommendation <- @progress.recommendations} class="mt-3 leading-7 text-slate-700">
+      <span class="font-semibold">{recommendation.title}.</span> {recommendation.message}
+    </p>
+  </section>
+
+  <a
+    href={~p"/demo/child"}
+    class="inline-flex rounded-xl px-3 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-50"
+  >Вернуться к заданию ребенка →</a>
+</Layouts.app>
