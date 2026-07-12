@@ -13,7 +13,11 @@ defmodule Backend.Learning do
   alias Backend.Content.Skill
   alias Backend.Content.Task
   alias Backend.Learning.ChildProfile
+  alias Backend.Learning.DiagnosticAnswer
+  alias Backend.Learning.DiagnosticSession
   alias Backend.Learning.TaskAttempt
+
+  @diagnostic_areas ["math", "reading", "logic"]
 
   # ---------------------------------------------------------------------------
   # Child profiles
@@ -157,6 +161,78 @@ defmodule Backend.Learning do
   end
 
   # ---------------------------------------------------------------------------
+  # Initial diagnostic
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Starts a short diagnostic session for a child.
+
+  The first version includes one age-appropriate, introductory task from each
+  available core area: math, reading, and logic.
+  """
+  def start_diagnostic(child_profile_id) do
+    with {:ok, child_profile} <- fetch_child_profile(child_profile_id) do
+      case diagnostic_tasks_for_child(child_profile) do
+        [] ->
+          {:error, :no_diagnostic_tasks_available}
+
+        [first_task | _remaining_tasks] ->
+          %DiagnosticSession{}
+          |> DiagnosticSession.create_changeset(child_profile.id)
+          |> Repo.insert()
+          |> case do
+            {:ok, diagnostic_session} ->
+              {:ok, %{session: diagnostic_session, task: first_task}}
+
+            {:error, changeset} ->
+              {:error, changeset}
+          end
+      end
+    end
+  end
+
+  @doc """
+  Grades one answer in a diagnostic session and returns the next task or the
+  completed diagnostic result.
+  """
+  def submit_diagnostic_answer(diagnostic_session_id, task_id, attrs \\ %{}) do
+    attrs = stringify_keys(attrs)
+
+    with {:ok, diagnostic_session} <- fetch_diagnostic_session(diagnostic_session_id),
+         :ok <- ensure_diagnostic_in_progress(diagnostic_session),
+         {:ok, expected_task} <- next_diagnostic_task(diagnostic_session),
+         :ok <- ensure_expected_diagnostic_task(expected_task, task_id),
+         {:ok, diagnostic_answer} <-
+           create_diagnostic_answer(diagnostic_session, expected_task.task, attrs) do
+      case next_diagnostic_task(diagnostic_session) do
+        {:ok, next_task} ->
+          {:ok,
+           %{
+             session: diagnostic_session,
+             answer: diagnostic_answer,
+             next_task: next_task,
+             completed: false
+           }}
+
+        {:error, :diagnostic_complete} ->
+          {:ok, completed_session} =
+            diagnostic_session
+            |> DiagnosticSession.complete_changeset()
+            |> Repo.update()
+
+          {:ok,
+           %{
+             session: completed_session,
+             answer: diagnostic_answer,
+             next_task: nil,
+             completed: true,
+             result: diagnostic_result(completed_session.id)
+           }}
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Task attempts
   # ---------------------------------------------------------------------------
 
@@ -275,6 +351,135 @@ defmodule Backend.Learning do
       nil -> {:error, :child_profile_not_found}
       child_profile -> {:ok, child_profile}
     end
+  end
+
+  defp fetch_diagnostic_session(diagnostic_session_id) do
+    case Repo.get(DiagnosticSession, diagnostic_session_id) do
+      nil -> {:error, :diagnostic_session_not_found}
+      diagnostic_session -> {:ok, diagnostic_session}
+    end
+  end
+
+  defp ensure_diagnostic_in_progress(%DiagnosticSession{status: "in_progress"}), do: :ok
+  defp ensure_diagnostic_in_progress(%DiagnosticSession{}), do: {:error, :diagnostic_completed}
+
+  defp ensure_expected_diagnostic_task(%{task: task}, task_id) do
+    if to_string(task.id) == to_string(task_id) do
+      :ok
+    else
+      {:error, :unexpected_diagnostic_task}
+    end
+  end
+
+  defp create_diagnostic_answer(diagnostic_session, task, attrs) do
+    is_correct = attrs["selected_answer"] == task.correct_answer
+    position = next_diagnostic_answer_position(diagnostic_session.id)
+
+    %DiagnosticAnswer{}
+    |> DiagnosticAnswer.changeset(
+      attrs,
+      diagnostic_session.id,
+      task.id,
+      is_correct,
+      position
+    )
+    |> Repo.insert()
+  end
+
+  defp next_diagnostic_task(%DiagnosticSession{} = diagnostic_session) do
+    with {:ok, child_profile} <- fetch_child_profile(diagnostic_session.child_profile_id) do
+      answered_task_ids =
+        from(diagnostic_answer in DiagnosticAnswer,
+          where: diagnostic_answer.diagnostic_session_id == ^diagnostic_session.id,
+          select: diagnostic_answer.task_id
+        )
+        |> Repo.all()
+        |> MapSet.new()
+
+      case Enum.find(diagnostic_tasks_for_child(child_profile), fn %{task: task} ->
+             task.id not in answered_task_ids
+           end) do
+        nil -> {:error, :diagnostic_complete}
+        task -> {:ok, task}
+      end
+    end
+  end
+
+  defp diagnostic_tasks_for_child(child_profile) do
+    tasks_by_area =
+      from(task in Task,
+        join: skill in Skill,
+        on: skill.id == task.skill_id,
+        where: skill.age_min <= ^child_profile.age and skill.age_max >= ^child_profile.age,
+        order_by: [asc: task.difficulty, asc: task.id],
+        select: {skill.area, task}
+      )
+      |> Repo.all()
+      |> Enum.group_by(fn {area, _task} -> area end, fn {_area, task} -> task end)
+
+    diagnostic_areas =
+      @diagnostic_areas ++
+        (tasks_by_area
+         |> Map.keys()
+         |> Enum.reject(&(&1 in @diagnostic_areas))
+         |> Enum.sort())
+
+    Enum.flat_map(diagnostic_areas, fn area ->
+      case Map.get(tasks_by_area, area, []) do
+        [task | _remaining_tasks] -> [%{area: area, task: task}]
+        [] -> []
+      end
+    end)
+  end
+
+  defp next_diagnostic_answer_position(diagnostic_session_id) do
+    from(diagnostic_answer in DiagnosticAnswer,
+      where: diagnostic_answer.diagnostic_session_id == ^diagnostic_session_id,
+      select: count(diagnostic_answer.id)
+    )
+    |> Repo.one()
+    |> Kernel.+(1)
+  end
+
+  defp diagnostic_result(diagnostic_session_id) do
+    areas =
+      from(diagnostic_answer in DiagnosticAnswer,
+        join: task in Task,
+        on: task.id == diagnostic_answer.task_id,
+        join: skill in Skill,
+        on: skill.id == task.skill_id,
+        where: diagnostic_answer.diagnostic_session_id == ^diagnostic_session_id,
+        order_by: [asc: diagnostic_answer.position],
+        select: %{
+          area: skill.area,
+          skill_id: skill.id,
+          skill_title: skill.title,
+          is_correct: diagnostic_answer.is_correct
+        }
+      )
+      |> Repo.all()
+      |> Enum.map(&diagnostic_area_result/1)
+
+    %{
+      total_areas: length(areas),
+      confident_areas: Enum.count(areas, &(&1.result == :ready_to_continue)),
+      areas: areas,
+      recommended_focus: Enum.filter(areas, &(&1.result == :start_from_basics))
+    }
+  end
+
+  defp diagnostic_area_result(%{is_correct: true} = area) do
+    Map.merge(area, %{
+      result: :ready_to_continue,
+      message: "Можно продолжать с заданиями текущего уровня."
+    })
+  end
+
+  defp diagnostic_area_result(area) do
+    Map.merge(area, %{
+      result: :start_from_basics,
+      message: "Рекомендуем начать с базовых заданий и двигаться маленькими шагами."
+    })
   end
 
   defp feedback_for(%TaskAttempt{is_correct: true}, _task) do

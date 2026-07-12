@@ -381,4 +381,98 @@ defmodule Backend.LearningTest do
       assert {:error, :child_profile_not_found} = Learning.progress_for_child(-1)
     end
   end
+
+  describe "initial diagnostic" do
+    alias Backend.Learning.DiagnosticAnswer
+    alias Backend.Learning.DiagnosticSession
+
+    import Backend.ContentFixtures
+    import Backend.LearningFixtures
+
+    test "starts a session and returns one introductory task for each core area" do
+      child_profile = child_profile_fixture(%{age: 6})
+
+      math_skill = skill_fixture(%{area: "math", age_min: 5, age_max: 7})
+      reading_skill = skill_fixture(%{area: "reading", age_min: 5, age_max: 7})
+      logic_skill = skill_fixture(%{area: "logic", age_min: 5, age_max: 7})
+
+      math_task = task_fixture(%{skill: math_skill, difficulty: 1})
+      _harder_math_task = task_fixture(%{skill: math_skill, difficulty: 2})
+      _reading_task = task_fixture(%{skill: reading_skill, difficulty: 1})
+      _logic_task = task_fixture(%{skill: logic_skill, difficulty: 1})
+
+      assert {:ok, %{session: %DiagnosticSession{} = session, task: task}} =
+               Learning.start_diagnostic(child_profile.id)
+
+      assert session.child_profile_id == child_profile.id
+      assert session.status == "in_progress"
+      assert task.area == "math"
+      assert task.task.id == math_task.id
+    end
+
+    test "grades answers and returns a completed starting route" do
+      child_profile = child_profile_fixture(%{age: 6})
+
+      math_task = diagnostic_task_fixture("math", "right")
+      reading_task = diagnostic_task_fixture("reading", "yes")
+      logic_task = diagnostic_task_fixture("logic", "blue")
+
+      assert {:ok, %{session: session, task: %{task: first_task}}} =
+               Learning.start_diagnostic(child_profile.id)
+
+      assert first_task.id == math_task.id
+
+      assert {:ok,
+              %{answer: %DiagnosticAnswer{is_correct: true}, next_task: %{task: second_task}}} =
+               Learning.submit_diagnostic_answer(session.id, first_task.id, %{
+                 selected_answer: "right"
+               })
+
+      assert second_task.id == reading_task.id
+
+      assert {:ok,
+              %{answer: %DiagnosticAnswer{is_correct: false}, next_task: %{task: third_task}}} =
+               Learning.submit_diagnostic_answer(session.id, second_task.id, %{
+                 selected_answer: "no"
+               })
+
+      assert third_task.id == logic_task.id
+
+      assert {:ok, %{completed: true, session: completed_session, result: result}} =
+               Learning.submit_diagnostic_answer(session.id, third_task.id, %{
+                 selected_answer: "blue"
+               })
+
+      assert completed_session.status == "completed"
+      assert result.total_areas == 3
+      assert result.confident_areas == 2
+
+      assert [%{area: "reading", result: :start_from_basics}] = result.recommended_focus
+    end
+
+    test "does not allow an answer for a task outside the diagnostic route" do
+      child_profile = child_profile_fixture(%{age: 6})
+      _math_task = diagnostic_task_fixture("math", "right")
+      unrelated_task = task_fixture()
+
+      assert {:ok, %{session: session}} = Learning.start_diagnostic(child_profile.id)
+
+      assert {:error, :unexpected_diagnostic_task} =
+               Learning.submit_diagnostic_answer(session.id, unrelated_task.id, %{
+                 selected_answer: "right"
+               })
+    end
+
+    test "returns an error without diagnostic content" do
+      child_profile = child_profile_fixture(%{age: 6})
+
+      assert {:error, :no_diagnostic_tasks_available} =
+               Learning.start_diagnostic(child_profile.id)
+    end
+
+    defp diagnostic_task_fixture(area, correct_answer) do
+      skill = skill_fixture(%{area: area, age_min: 5, age_max: 7})
+      task_fixture(%{skill: skill, correct_answer: correct_answer, difficulty: 1})
+    end
+  end
 end
