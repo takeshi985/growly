@@ -41,6 +41,16 @@ Open the Growly browser prototype at:
 http://localhost:4000/demo
 ```
 
+Open the internal educational content editor at:
+
+```text
+http://localhost:4000/admin/content
+```
+
+Content Admin lets the team create and maintain skills and tasks before the
+Flutter mobile application is built. It is an internal MVP tool and does not
+have authentication yet, so it must not be exposed publicly.
+
 The demo includes:
 
 - a child flow with math, reading, and logic tasks;

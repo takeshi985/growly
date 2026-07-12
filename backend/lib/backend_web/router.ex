@@ -28,6 +28,14 @@ defmodule BackendWeb.Router do
     post("/demo/diagnostic/answer", DemoController, :answer_diagnostic)
   end
 
+  scope "/admin/content", BackendWeb.Admin do
+    pipe_through(:browser)
+
+    get("/", ContentController, :index)
+    resources("/skills", SkillController, except: [:show])
+    resources("/tasks", TaskController, except: [:show])
+  end
+
   # Other scopes may use custom stacks.
   scope "/api", BackendWeb do
     pipe_through(:api)

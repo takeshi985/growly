@@ -21,6 +21,13 @@ defmodule Backend.Content do
     Repo.all(Skill)
   end
 
+  @doc "Returns skills ordered for the admin UI with their tasks preloaded."
+  def list_skills_with_tasks do
+    from(skill in Skill, order_by: [asc: skill.area, asc: skill.title])
+    |> Repo.all()
+    |> Repo.preload(:tasks)
+  end
+
   @doc """
   Gets a single skill.
 
@@ -115,6 +122,38 @@ defmodule Backend.Content do
   """
   def list_tasks do
     Repo.all(Task)
+  end
+
+  @doc "Returns tasks ordered for the admin UI with their skill preloaded."
+  def list_tasks_with_skills do
+    from(task in Task,
+      join: skill in assoc(task, :skill),
+      order_by: [asc: skill.area, asc: skill.title, asc: task.difficulty, asc: task.id],
+      preload: [skill: skill]
+    )
+    |> Repo.all()
+  end
+
+  @doc "Returns compact content totals for the internal admin homepage."
+  def content_summary do
+    area_counts =
+      from(skill in Skill, group_by: skill.area, select: {skill.area, count(skill.id)})
+      |> Repo.all()
+      |> Map.new()
+
+    %{
+      total_skills: Repo.aggregate(Skill, :count),
+      total_tasks: Repo.aggregate(Task, :count),
+      math_skills: Map.get(area_counts, "math", 0),
+      reading_skills: Map.get(area_counts, "reading", 0),
+      logic_skills: Map.get(area_counts, "logic", 0)
+    }
+  end
+
+  @doc "Counts tasks linked to one skill."
+  def count_tasks_for_skill(skill_id) do
+    from(task in Task, where: task.skill_id == ^skill_id)
+    |> Repo.aggregate(:count)
   end
 
   @doc """
