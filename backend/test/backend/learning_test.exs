@@ -1,0 +1,309 @@
+defmodule Backend.LearningTest do
+  use Backend.DataCase
+
+  alias Backend.Learning
+
+  describe "child_profiles" do
+    alias Backend.Learning.ChildProfile
+
+    import Backend.AccountsFixtures
+    import Backend.LearningFixtures
+
+    @invalid_attrs %{parent_id: nil, name: nil, age: nil}
+
+    test "list_child_profiles/0 returns all child_profiles" do
+      child_profile = child_profile_fixture()
+      assert Learning.list_child_profiles() == [child_profile]
+    end
+
+    test "get_child_profile!/1 returns the child_profile with given id" do
+      child_profile = child_profile_fixture()
+      assert Learning.get_child_profile!(child_profile.id) == child_profile
+    end
+
+    test "create_child_profile/1 with valid data creates a child_profile" do
+      parent = parent_fixture()
+      valid_attrs = %{parent_id: parent.id, name: "some name", age: 6}
+
+      assert {:ok, %ChildProfile{} = child_profile} = Learning.create_child_profile(valid_attrs)
+      assert child_profile.parent_id == parent.id
+      assert child_profile.name == "some name"
+      assert child_profile.age == 6
+    end
+
+    test "create_child_profile/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Learning.create_child_profile(@invalid_attrs)
+    end
+
+    test "update_child_profile/2 with valid data updates the child_profile" do
+      child_profile = child_profile_fixture()
+      update_attrs = %{name: "some updated name", age: 7}
+
+      assert {:ok, %ChildProfile{} = child_profile} =
+               Learning.update_child_profile(child_profile, update_attrs)
+
+      assert child_profile.name == "some updated name"
+      assert child_profile.age == 7
+    end
+
+    test "update_child_profile/2 with invalid data returns error changeset" do
+      child_profile = child_profile_fixture()
+
+      assert {:error, %Ecto.Changeset{}} =
+               Learning.update_child_profile(child_profile, @invalid_attrs)
+
+      assert child_profile == Learning.get_child_profile!(child_profile.id)
+    end
+
+    test "delete_child_profile/1 deletes the child_profile" do
+      child_profile = child_profile_fixture()
+      assert {:ok, %ChildProfile{}} = Learning.delete_child_profile(child_profile)
+      assert_raise Ecto.NoResultsError, fn -> Learning.get_child_profile!(child_profile.id) end
+    end
+
+    test "change_child_profile/1 returns a child_profile changeset" do
+      child_profile = child_profile_fixture()
+      assert %Ecto.Changeset{} = Learning.change_child_profile(child_profile)
+    end
+  end
+
+  describe "task_attempts" do
+    alias Backend.Learning.TaskAttempt
+
+    import Backend.ContentFixtures
+    import Backend.LearningFixtures
+
+    @invalid_attrs %{child_profile_id: nil, task_id: nil, selected_answer: nil, hint_used: nil}
+
+    test "list_task_attempts/0 returns all task_attempts" do
+      task_attempt = task_attempt_fixture()
+      assert Learning.list_task_attempts() == [task_attempt]
+    end
+
+    test "get_task_attempt!/1 returns the task_attempt with given id" do
+      task_attempt = task_attempt_fixture()
+      assert Learning.get_task_attempt!(task_attempt.id) == task_attempt
+    end
+
+    test "create_task_attempt/1 with valid data creates a task_attempt" do
+      child_profile = child_profile_fixture()
+      task = task_fixture(%{correct_answer: "right"})
+
+      valid_attrs = %{
+        child_profile_id: child_profile.id,
+        task_id: task.id,
+        selected_answer: "right",
+        hint_used: true
+      }
+
+      assert {:ok, %TaskAttempt{} = task_attempt} = Learning.create_task_attempt(valid_attrs)
+      assert task_attempt.child_profile_id == child_profile.id
+      assert task_attempt.task_id == task.id
+      assert task_attempt.selected_answer == "right"
+      assert task_attempt.is_correct == true
+      assert task_attempt.hint_used == true
+      assert task_attempt.attempt_number == 1
+    end
+
+    test "create_task_attempt/1 grades wrong answers on the backend" do
+      child_profile = child_profile_fixture()
+      task = task_fixture(%{correct_answer: "right"})
+
+      attrs = %{
+        child_profile_id: child_profile.id,
+        task_id: task.id,
+        selected_answer: "left",
+        hint_used: false
+      }
+
+      assert {:ok, %TaskAttempt{} = task_attempt} = Learning.create_task_attempt(attrs)
+      assert task_attempt.is_correct == false
+      assert task_attempt.attempt_number == 1
+    end
+
+    test "create_task_attempt/1 increments attempt_number for repeated task attempts" do
+      child_profile = child_profile_fixture()
+      task = task_fixture(%{correct_answer: "right"})
+
+      attrs = %{
+        child_profile_id: child_profile.id,
+        task_id: task.id,
+        selected_answer: "left",
+        hint_used: true
+      }
+
+      assert {:ok, %TaskAttempt{attempt_number: 1}} = Learning.create_task_attempt(attrs)
+      assert {:ok, %TaskAttempt{attempt_number: 2}} = Learning.create_task_attempt(attrs)
+    end
+
+    test "create_task_attempt/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Learning.create_task_attempt(@invalid_attrs)
+    end
+
+    test "update_task_attempt/2 with valid data updates the task_attempt" do
+      task_attempt = task_attempt_fixture()
+
+      update_attrs = %{
+        selected_answer: "some updated selected_answer",
+        is_correct: false,
+        hint_used: false,
+        attempt_number: 43
+      }
+
+      assert {:ok, %TaskAttempt{} = task_attempt} =
+               Learning.update_task_attempt(task_attempt, update_attrs)
+
+      assert task_attempt.selected_answer == "some updated selected_answer"
+      assert task_attempt.is_correct == false
+      assert task_attempt.hint_used == false
+      assert task_attempt.attempt_number == 43
+    end
+
+    test "update_task_attempt/2 with invalid data returns error changeset" do
+      task_attempt = task_attempt_fixture()
+
+      assert {:error, %Ecto.Changeset{}} =
+               Learning.update_task_attempt(task_attempt, @invalid_attrs)
+
+      assert task_attempt == Learning.get_task_attempt!(task_attempt.id)
+    end
+
+    test "delete_task_attempt/1 deletes the task_attempt" do
+      task_attempt = task_attempt_fixture()
+      assert {:ok, %TaskAttempt{}} = Learning.delete_task_attempt(task_attempt)
+      assert_raise Ecto.NoResultsError, fn -> Learning.get_task_attempt!(task_attempt.id) end
+    end
+
+    test "change_task_attempt/1 returns a task_attempt changeset" do
+      task_attempt = task_attempt_fixture()
+      assert %Ecto.Changeset{} = Learning.change_task_attempt(task_attempt)
+    end
+  end
+
+  describe "next_task_for_child/1" do
+    alias Backend.Learning.TaskAttempt
+
+    import Backend.ContentFixtures
+    import Backend.LearningFixtures
+
+    test "returns the easiest unanswered age-appropriate task" do
+      child_profile = child_profile_fixture(%{age: 6})
+      matching_skill = skill_fixture(%{age_min: 5, age_max: 7})
+      older_skill = skill_fixture(%{age_min: 8, age_max: 9})
+
+      harder_task = task_fixture(%{skill: matching_skill, difficulty: 3})
+      easier_task = task_fixture(%{skill: matching_skill, difficulty: 1})
+      _too_old_task = task_fixture(%{skill: older_skill, difficulty: 1})
+
+      assert {:ok, task} = Learning.next_task_for_child(child_profile.id)
+      assert task.id == easier_task.id
+      refute task.id == harder_task.id
+    end
+
+    test "skips tasks already answered correctly by the child" do
+      child_profile = child_profile_fixture(%{age: 6})
+      skill = skill_fixture(%{age_min: 5, age_max: 7})
+
+      completed_task = task_fixture(%{skill: skill, difficulty: 1, correct_answer: "right"})
+      next_task = task_fixture(%{skill: skill, difficulty: 2})
+
+      assert {:ok, %Backend.Learning.TaskAttempt{}} =
+               Learning.create_task_attempt(%{
+                 child_profile_id: child_profile.id,
+                 task_id: completed_task.id,
+                 selected_answer: "right",
+                 hint_used: false
+               })
+
+      assert {:ok, task} = Learning.next_task_for_child(child_profile.id)
+      assert task.id == next_task.id
+    end
+
+    test "returns an error when the child profile does not exist" do
+      assert {:error, :child_profile_not_found} = Learning.next_task_for_child(-1)
+    end
+
+    test "returns an error when no task is available" do
+      child_profile = child_profile_fixture(%{age: 6})
+
+      assert {:error, :no_task_available} = Learning.next_task_for_child(child_profile.id)
+    end
+
+    test "skips a task after three incorrect answers" do
+      child_profile = child_profile_fixture(%{age: 6})
+      skill = skill_fixture(%{age_min: 5, age_max: 7})
+      deferred_task = task_fixture(%{skill: skill, difficulty: 1, correct_answer: "right"})
+      next_task = task_fixture(%{skill: skill, difficulty: 2})
+
+      for _ <- 1..3 do
+        assert {:ok, %TaskAttempt{is_correct: false}} =
+                 Learning.create_task_attempt(%{
+                   child_profile_id: child_profile.id,
+                   task_id: deferred_task.id,
+                   selected_answer: "left",
+                   hint_used: false
+                 })
+      end
+
+      assert {:ok, task} = Learning.next_task_for_child(child_profile.id)
+      assert task.id == next_task.id
+    end
+  end
+
+  describe "submit_task_answer/3" do
+    import Backend.ContentFixtures
+    import Backend.LearningFixtures
+
+    test "returns a continue response after a correct answer" do
+      child_profile = child_profile_fixture()
+      task = task_fixture(%{correct_answer: "right"})
+
+      assert {:ok, %{task_attempt: attempt, feedback: feedback}} =
+               Learning.submit_task_answer(child_profile.id, task.id, %{
+                 selected_answer: "right",
+                 hint_used: false
+               })
+
+      assert attempt.is_correct == true
+
+      assert feedback == %{
+               result: :correct,
+               action: :continue,
+               message: "Отлично! Ты справился.",
+               can_continue: true
+             }
+    end
+
+    test "returns progressively stronger help after wrong answers" do
+      child_profile = child_profile_fixture()
+
+      task =
+        task_fixture(%{
+          correct_answer: "right",
+          hint1: "Сначала посчитай предметы.",
+          hint2: "Слева 3, а справа 5.",
+          explanation: "5 больше, чем 3."
+        })
+
+      assert {:ok, %{feedback: %{action: :show_hint1, hint: "Сначала посчитай предметы."}}} =
+               Learning.submit_task_answer(child_profile.id, task.id, %{selected_answer: "left"})
+
+      assert {:ok, %{feedback: %{action: :show_hint2, hint: "Слева 3, а справа 5."}}} =
+               Learning.submit_task_answer(child_profile.id, task.id, %{selected_answer: "left"})
+
+      assert {:ok, %{feedback: %{action: :review_later, explanation: "5 больше, чем 3."}}} =
+               Learning.submit_task_answer(child_profile.id, task.id, %{selected_answer: "left"})
+    end
+
+    test "returns errors when the child or task does not exist" do
+      child_profile = child_profile_fixture()
+      task = task_fixture()
+
+      assert {:error, :child_profile_not_found} =
+               Learning.submit_task_answer(-1, task.id, %{selected_answer: "right"})
+
+      assert {:error, :task_not_found} =
+               Learning.submit_task_answer(child_profile.id, -1, %{selected_answer: "right"})
+    end
+  end
+end

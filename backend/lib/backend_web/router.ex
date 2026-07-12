@@ -1,0 +1,53 @@
+defmodule BackendWeb.Router do
+  use BackendWeb, :router
+
+  pipeline :browser do
+    plug(:accepts, ["html"])
+    plug(:fetch_session)
+    plug(:fetch_live_flash)
+    plug(:put_root_layout, html: {BackendWeb.Layouts, :root})
+    plug(:protect_from_forgery)
+    plug(:put_secure_browser_headers)
+  end
+
+  pipeline :api do
+    plug(:accepts, ["json"])
+  end
+
+  scope "/", BackendWeb do
+    pipe_through(:browser)
+
+    get("/", PageController, :home)
+  end
+
+  # Other scopes may use custom stacks.
+  scope "/api", BackendWeb do
+    pipe_through(:api)
+
+    resources("/parents", ParentController, except: [:new, :edit])
+    resources("/child_profiles", ChildProfileController, except: [:new, :edit])
+    resources("/skills", SkillController, except: [:new, :edit])
+    resources("/tasks", TaskController, except: [:new, :edit])
+    resources("/task_attempts", TaskAttemptController, except: [:new, :edit])
+
+    get("/children/:child_id/next_task", ChildNextTaskController, :show)
+    post("/children/:child_id/tasks/:task_id/answer", ChildTaskAnswerController, :create)
+  end
+
+  # Enable LiveDashboard and Swoosh mailbox preview in development
+  if Application.compile_env(:backend, :dev_routes) do
+    # If you want to use the LiveDashboard in production, you should put
+    # it behind authentication and allow only admins to access it.
+    # If your application does not have an admins-only section yet,
+    # you can use Plug.BasicAuth to set up some basic authentication
+    # as long as you are also using SSL (which you should anyway).
+    import Phoenix.LiveDashboard.Router
+
+    scope "/dev" do
+      pipe_through(:browser)
+
+      live_dashboard("/dashboard", metrics: BackendWeb.Telemetry)
+      forward("/mailbox", Plug.Swoosh.MailboxPreview)
+    end
+  end
+end
