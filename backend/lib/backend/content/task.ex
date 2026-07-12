@@ -13,6 +13,7 @@ defmodule Backend.Content.Task do
     field(:hint1, :string)
     field(:hint2, :string)
     field(:explanation, :string)
+    field(:options_text, :string, virtual: true)
 
     belongs_to(:skill, Skill)
 
@@ -31,6 +32,7 @@ defmodule Backend.Content.Task do
       :hint1,
       :hint2,
       :explanation,
+      :options_text,
       :skill_id
     ])
     |> validate_required([

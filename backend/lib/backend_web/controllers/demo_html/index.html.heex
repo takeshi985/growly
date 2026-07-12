@@ -83,17 +83,24 @@
         Это браузерный прототип. Позже появятся мобильное приложение Flutter и бумажные тетради с QR-связкой.
       </p>
     </div>
-    <.form
-      for={Phoenix.Component.to_form(%{}, as: :reset)}
-      id="demo-reset-form"
-      action={~p"/demo/reset"}
-      method="post"
-    >
-      <button
-        id="demo-reset-button"
-        type="submit"
-        class="whitespace-nowrap rounded-2xl border border-slate-300 bg-white px-5 py-3 font-bold text-slate-700 transition hover:border-violet-300 hover:text-violet-700"
-      >Сбросить демо-прогресс</button>
-    </.form>
+    <div class="flex flex-wrap gap-3">
+      <a
+        id="content-admin-link"
+        href={~p"/admin/content"}
+        class="whitespace-nowrap rounded-2xl bg-slate-900 px-5 py-3 font-bold text-white transition hover:bg-violet-700"
+      >Content Admin</a>
+      <.form
+        for={Phoenix.Component.to_form(%{}, as: :reset)}
+        id="demo-reset-form"
+        action={~p"/demo/reset"}
+        method="post"
+      >
+        <button
+          id="demo-reset-button"
+          type="submit"
+          class="whitespace-nowrap rounded-2xl border border-slate-300 bg-white px-5 py-3 font-bold text-slate-700 transition hover:border-violet-300 hover:text-violet-700"
+        >Сбросить демо-прогресс</button>
+      </.form>
+    </div>
   </section>
 </Layouts.app>
