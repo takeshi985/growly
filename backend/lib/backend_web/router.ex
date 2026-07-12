@@ -22,6 +22,10 @@ defmodule BackendWeb.Router do
     get("/demo/child", DemoController, :child)
     post("/demo/child/answer", DemoController, :answer)
     get("/demo/parent", DemoController, :parent)
+    post("/demo/reset", DemoController, :reset)
+    get("/demo/diagnostic", DemoController, :diagnostic)
+    post("/demo/diagnostic/start", DemoController, :start_diagnostic)
+    post("/demo/diagnostic/answer", DemoController, :answer_diagnostic)
   end
 
   # Other scopes may use custom stacks.

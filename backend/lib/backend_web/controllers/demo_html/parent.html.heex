@@ -1,76 +1,146 @@
 <Layouts.app flash={@flash}>
-  <div class="flex items-center justify-between gap-4">
-    <div>
-      <p class="text-sm font-semibold text-amber-600">Режим родителя</p>
-      <h1 id="parent-demo-heading" class="text-3xl font-bold tracking-tight text-slate-900">
-        Прогресс ребенка: {@child.name}
-      </h1>
-    </div>
+  <nav class="flex items-center justify-between gap-4">
     <a
       href={~p"/demo"}
-      class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
-    >К демо</a>
-  </div>
+      class="rounded-xl px-3 py-2 font-bold text-slate-600 transition hover:bg-white"
+    >← К демо</a>
+    <a
+      href={~p"/demo/child"}
+      class="rounded-xl bg-violet-50 px-4 py-2 font-bold text-violet-700 transition hover:bg-violet-100"
+    >Режим ребёнка</a>
+  </nav>
 
-  <section class="grid gap-4 sm:grid-cols-3">
-    <div class="rounded-2xl bg-amber-50 p-5">
-      <p class="text-sm font-semibold text-amber-700">Выполнено заданий</p>
-      <p class="mt-2 text-3xl font-bold text-slate-900">
-        {@progress.summary.completed_tasks} / {@progress.summary.total_tasks}
-      </p>
+  <header class="rounded-[2rem] bg-gradient-to-br from-slate-900 to-slate-700 p-7 text-white shadow-xl sm:p-10">
+    <p class="text-sm font-bold uppercase tracking-[0.2em] text-amber-300">Кабинет родителя</p>
+    <div class="mt-4 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 id="parent-demo-heading" class="text-3xl font-black tracking-tight sm:text-4xl">
+          Прогресс ребенка: {@child.name}
+        </h1>
+        <p class="mt-2 text-slate-300">{@child.age} лет · навыки, попытки и точки поддержки</p>
+      </div>
+      <div class="rounded-2xl bg-white/10 px-5 py-4 backdrop-blur">
+        <p class="text-sm text-slate-300">Общий прогресс</p>
+        <p class="text-3xl font-black">{@progress.summary.completion_percentage}%</p>
+      </div>
     </div>
-    <div class="rounded-2xl bg-emerald-50 p-5">
-      <p class="text-sm font-semibold text-emerald-700">Освоено навыков</p>
-      <p class="mt-2 text-3xl font-bold text-slate-900">{@progress.summary.mastered_skills}</p>
-    </div>
-    <div class="rounded-2xl bg-sky-50 p-5">
-      <p class="text-sm font-semibold text-sky-700">Общий прогресс</p>
-      <p class="mt-2 text-3xl font-bold text-slate-900">
-        {@progress.summary.completion_percentage}%
-      </p>
-    </div>
+  </header>
+
+  <section id="parent-summary" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <.summary_card label="Навыков" value={@progress.summary.total_skills} tone="violet" />
+    <.summary_card
+      label="Освоено"
+      value={@progress.summary.mastered_skills}
+      tone="emerald"
+    />
+    <.summary_card
+      label="Нужно повторить"
+      value={@progress.summary.skills_needing_review}
+      tone="amber"
+    />
+    <.summary_card
+      label="Заданий выполнено"
+      value={"#{@progress.summary.completed_tasks} / #{@progress.summary.total_tasks}"}
+      tone="sky"
+    />
   </section>
 
-  <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-    <h2 class="text-xl font-bold text-slate-900">Навыки</h2>
-    <div class="mt-5 space-y-4">
-      <div
+  <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-widest text-slate-400">Карта развития</p>
+        <h2 class="mt-1 text-2xl font-black text-slate-900">Прогресс по навыкам</h2>
+      </div>
+      <p class="max-w-md text-sm leading-6 text-slate-500">
+        Здесь видно не просто прохождение уровней, а что именно ребёнок понимает и где ему нужна поддержка.
+      </p>
+    </div>
+
+    <div id="parent-skills" class="mt-7 grid gap-4 lg:grid-cols-2">
+      <article
         :for={skill <- @progress.skills}
         id={"parent-skill-#{skill.id}"}
-        class="rounded-2xl bg-slate-50 p-4"
+        class="rounded-2xl border border-slate-100 bg-slate-50 p-5"
       >
         <div class="flex items-start justify-between gap-4">
           <div>
-            <h3 class="font-bold text-slate-900">{skill.title}</h3>
-            <p class="mt-1 text-sm text-slate-600">
-              {skill.completed_tasks} из {skill.total_tasks} заданий выполнено
-            </p>
+            <span class="rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-500">{area_label(
+              skill.area
+            )}</span>
+            <h3 class="mt-3 text-lg font-black text-slate-900">{skill.title}</h3>
           </div>
-          <span class="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-700">{skill.completion_percentage}%</span>
+          <span class={status_class(skill.status)}>{status_label(skill.status)}</span>
         </div>
-        <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+        <div class="mt-5 flex items-center justify-between text-sm font-bold text-slate-600">
+          <span>{skill.completed_tasks} из {skill.total_tasks} заданий</span><span>{skill.completion_percentage}%</span>
+        </div>
+        <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
           <div
-            class="h-full rounded-full bg-amber-500"
+            class="h-full rounded-full bg-violet-500"
             style={"width: #{skill.completion_percentage}%"}
           >
           </div>
+        </div>
+        <dl class="mt-5 grid grid-cols-3 gap-2 text-center">
+          <div class="rounded-xl bg-white p-3">
+            <dt class="text-xs text-slate-500">Ошибок</dt><dd class="mt-1 font-black text-slate-900">
+              {skill.incorrect_attempts_count}
+            </dd>
+          </div>
+          <div class="rounded-xl bg-white p-3">
+            <dt class="text-xs text-slate-500">Подсказок</dt><dd class="mt-1 font-black text-slate-900">
+              {skill.hints_used_count}
+            </dd>
+          </div>
+          <div class="rounded-xl bg-white p-3">
+            <dt class="text-xs text-slate-500">Повторить</dt><dd class="mt-1 font-black text-slate-900">
+              {skill.tasks_needing_review_count}
+            </dd>
+          </div>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <section
+    id="parent-recommendations"
+    class="rounded-3xl border border-amber-200 bg-amber-50 p-6 sm:p-8"
+  >
+    <div class="flex items-start gap-4">
+      <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-amber-200 text-2xl">
+        💬
+      </div>
+      <div class="w-full">
+        <h2 class="text-2xl font-black text-slate-900">Рекомендации</h2>
+        <div
+          :if={@progress.recommendations == []}
+          id="parent-empty-recommendations"
+          class="mt-3 leading-7 text-slate-700"
+        >
+          Пока навыков для обязательного повторения нет. Продолжайте короткие занятия — рекомендации появятся после нескольких попыток.
+        </div>
+        <div
+          :for={recommendation <- @progress.recommendations}
+          class="mt-4 rounded-2xl bg-white/70 p-4"
+        >
+          <p class="font-black text-slate-900">{recommendation.title}</p><p class="mt-1 leading-7 text-slate-700">
+            {recommendation.message}
+          </p>
         </div>
       </div>
     </div>
   </section>
 
-  <section
-    :if={@progress.recommendations != []}
-    class="rounded-3xl border border-violet-100 bg-violet-50 p-6"
+  <.form
+    for={Phoenix.Component.to_form(%{}, as: :reset)}
+    id="parent-reset-form"
+    action={~p"/demo/reset"}
+    method="post"
+    class="text-center"
   >
-    <h2 class="text-xl font-bold text-slate-900">Что повторить</h2>
-    <p :for={recommendation <- @progress.recommendations} class="mt-3 leading-7 text-slate-700">
-      <span class="font-semibold">{recommendation.title}.</span> {recommendation.message}
-    </p>
-  </section>
-
-  <a
-    href={~p"/demo/child"}
-    class="inline-flex rounded-xl px-3 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-50"
-  >Вернуться к заданию ребенка →</a>
+    <button
+      type="submit"
+      class="rounded-2xl border border-slate-300 bg-white px-5 py-3 font-bold text-slate-600 transition hover:border-violet-300 hover:text-violet-700"
+    >Сбросить демо-прогресс</button>
+  </.form>
 </Layouts.app>

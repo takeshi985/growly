@@ -505,7 +505,7 @@ defmodule Backend.Learning do
     %{
       result: :incorrect,
       action: :show_hint2,
-      message: "Ты хорошо стараешься. Вот еще подсказка.",
+      message: "Ты хорошо стараешься. Вот ещё подсказка.",
       hint: task.hint2,
       can_continue: true
     }
@@ -515,7 +515,7 @@ defmodule Backend.Learning do
     %{
       result: :incorrect,
       action: :review_later,
-      message: "Это задание пока сложное. Мы вернемся к нему позже.",
+      message: "Это задание пока сложное. Мы вернёмся к нему позже.",
       explanation: task.explanation,
       can_continue: true
     }
@@ -633,7 +633,8 @@ defmodule Backend.Learning do
       %{
         skill_id: skill.id,
         title: "Повторить: #{skill.title}",
-        message: "В этом навыке ребенку пока нужна дополнительная практика и поддержка."
+        message:
+          "Было три сложных попытки без успешного ответа. Полезно вернуться к этому навыку в спокойном темпе и пройти более простые примеры."
       }
     end)
   end
