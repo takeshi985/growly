@@ -51,6 +51,17 @@ Content Admin lets the team create and maintain skills and tasks before the
 Flutter mobile application is built. It is an internal MVP tool and does not
 have authentication yet, so it must not be exposed publicly.
 
+Mobile API documentation is available at:
+
+```text
+http://localhost:4000/admin/api-docs
+```
+
+The versioned Flutter-ready endpoints live under `/api/mobile/v1`. See
+[`docs/mobile_api_contract.md`](docs/mobile_api_contract.md) for request and
+response rules, Android emulator setup, child feedback behavior, and privacy
+notes.
+
 The demo includes:
 
 - a child flow with math, reading, and logic tasks;

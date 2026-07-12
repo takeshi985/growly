@@ -16,8 +16,9 @@ defmodule Backend.DemoTest do
     assert Enum.map(second.skills, & &1.id) == Enum.map(first.skills, & &1.id)
     assert Enum.map(second.tasks, & &1.id) == Enum.map(first.tasks, & &1.id)
     assert Enum.sort(Enum.uniq(Enum.map(first.skills, & &1.area))) == ["logic", "math", "reading"]
-    assert length(first.skills) == 9
-    assert length(first.tasks) == 9
+    assert first.parent.email == "demo-parent@growly.local"
+    assert length(first.skills) == 12
+    assert length(first.tasks) == 12
   end
 
   test "reset_progress/0 deletes only the demo child's learning progress" do

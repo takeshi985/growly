@@ -26,6 +26,7 @@ defmodule BackendWeb.Router do
     get("/demo/diagnostic", DemoController, :diagnostic)
     post("/demo/diagnostic/start", DemoController, :start_diagnostic)
     post("/demo/diagnostic/answer", DemoController, :answer_diagnostic)
+    get("/admin/api-docs", Admin.ApiDocsController, :index)
   end
 
   scope "/admin/content", BackendWeb.Admin do
@@ -51,6 +52,21 @@ defmodule BackendWeb.Router do
     post("/children/:child_id/diagnostic_sessions", ChildDiagnosticController, :create)
     post("/diagnostic_sessions/:session_id/answers", DiagnosticAnswerController, :create)
     post("/children/:child_id/tasks/:task_id/answer", ChildTaskAnswerController, :create)
+  end
+
+  scope "/api/mobile/v1", BackendWeb do
+    pipe_through(:api)
+
+    get("/children/:child_id/session", MobileV1Controller, :session)
+    post("/children/:child_id/tasks/:task_id/answer", MobileV1Controller, :answer)
+    get("/children/:child_id/progress", MobileV1Controller, :progress)
+    post("/children/:child_id/diagnostic/start", MobileV1Controller, :start_diagnostic)
+
+    post(
+      "/diagnostic_sessions/:session_id/tasks/:task_id/answer",
+      MobileV1Controller,
+      :diagnostic_answer
+    )
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

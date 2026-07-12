@@ -248,6 +248,27 @@ defmodule Backend.LearningTest do
       assert {:ok, task} = Learning.next_task_for_child(child_profile.id)
       assert task.id == next_task.id
     end
+
+    test "mixes areas between equally difficult tasks after a correct answer" do
+      child_profile = child_profile_fixture(%{age: 6})
+      math_skill = skill_fixture(%{area: "math", age_min: 5, age_max: 7})
+      reading_skill = skill_fixture(%{area: "reading", age_min: 5, age_max: 7})
+
+      completed_math = task_fixture(%{skill: math_skill, difficulty: 1, correct_answer: "yes"})
+      _next_math = task_fixture(%{skill: math_skill, difficulty: 1})
+      reading_task = task_fixture(%{skill: reading_skill, difficulty: 1})
+
+      assert {:ok, _attempt} =
+               Learning.create_task_attempt(%{
+                 child_profile_id: child_profile.id,
+                 task_id: completed_math.id,
+                 selected_answer: "yes",
+                 hint_used: false
+               })
+
+      assert {:ok, next_task} = Learning.next_task_for_child(child_profile.id)
+      assert next_task.id == reading_task.id
+    end
   end
 
   describe "submit_task_answer/3" do
@@ -371,6 +392,7 @@ defmodule Backend.LearningTest do
       assert progress.recommendations == [
                %{
                  skill_id: math_skill.id,
+                 priority: :high,
                  title: "Повторить: Счет предметов",
                  message:
                    "Было три сложных попытки без успешного ответа. Полезно вернуться к этому навыку в спокойном темпе и пройти более простые примеры."

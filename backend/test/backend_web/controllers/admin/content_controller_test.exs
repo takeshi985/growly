@@ -12,6 +12,17 @@ defmodule BackendWeb.Admin.ContentControllerTest do
              "Growly Content Admin"
 
     assert Enum.count(LazyHTML.query(document, "#content-admin-summary")) == 1
+    assert Enum.count(LazyHTML.query(document, "#admin-api-docs-link")) == 1
+  end
+
+  test "GET /admin/api-docs renders the mobile API contract", %{conn: conn} do
+    document = conn |> get(~p"/admin/api-docs") |> document()
+
+    assert LazyHTML.text(LazyHTML.query_by_id(document, "mobile-api-docs-heading")) =~
+             "Growly Mobile API v1"
+
+    assert LazyHTML.text(LazyHTML.query_by_id(document, "mobile-api-endpoints")) =~
+             "/api/mobile/v1/children/:child_id/session"
   end
 
   test "GET /admin/content/skills renders skills", %{conn: conn} do

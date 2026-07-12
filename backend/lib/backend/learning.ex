@@ -102,7 +102,7 @@ defmodule Backend.Learning do
             select: task_attempt.task_id
           )
 
-        task =
+        candidates =
           from(task in Task,
             join: skill in Skill,
             on: skill.id == task.skill_id,
@@ -112,14 +112,96 @@ defmodule Backend.Learning do
                 task.id not in subquery(completed_task_ids) and
                 task.id not in subquery(deferred_task_ids),
             order_by: [asc: task.difficulty, asc: task.id],
-            limit: 1
+            select: {task, skill.area}
           )
-          |> Repo.one()
+          |> Repo.all()
+
+        task = choose_session_task(candidates, child_profile.id)
 
         case task do
           nil -> {:error, :no_task_available}
           %Task{} = task -> {:ok, task}
         end
+    end
+  end
+
+  defp choose_session_task([], _child_profile_id), do: nil
+
+  defp choose_session_task(candidates, child_profile_id) do
+    latest_attempt =
+      from(attempt in TaskAttempt,
+        join: task in Task,
+        on: task.id == attempt.task_id,
+        join: skill in Skill,
+        on: skill.id == task.skill_id,
+        where: attempt.child_profile_id == ^child_profile_id,
+        order_by: [desc: attempt.id],
+        limit: 1,
+        select: %{task_id: attempt.task_id, area: skill.area, is_correct: attempt.is_correct}
+      )
+      |> Repo.one()
+
+    retry_task =
+      if latest_attempt && not latest_attempt.is_correct do
+        Enum.find(candidates, fn {task, _area} -> task.id == latest_attempt.task_id end)
+      end
+
+    case retry_task do
+      {task, _area} ->
+        task
+
+      nil ->
+        minimum_difficulty = candidates |> List.first() |> elem(0) |> Map.fetch!(:difficulty)
+
+        easiest =
+          Enum.take_while(candidates, fn {task, _area} ->
+            task.difficulty == minimum_difficulty
+          end)
+
+        preferred =
+          if latest_attempt do
+            Enum.find(easiest, fn {_task, area} -> area != latest_attempt.area end)
+          end
+
+        {task, _area} = preferred || List.first(easiest)
+        task
+    end
+  end
+
+  @doc """
+  Builds the stable learning-session state consumed by mobile and browser clients.
+
+  The task is returned with its skill preloaded, while answer keys and staged
+  hints remain server-side concerns handled by serializers and feedback.
+  """
+  def learning_session_for_child(child_profile_id) do
+    with {:ok, child_profile} <- fetch_child_profile(child_profile_id),
+         {:ok, progress} <- progress_for_child(child_profile.id) do
+      case next_task_for_child(child_profile.id) do
+        {:ok, task} ->
+          {:ok,
+           %{
+             child: child_profile,
+             next_task: Repo.preload(task, :skill),
+             progress: progress,
+             session_state: %{
+               has_next_task: true,
+               message: "Следующее короткое задание готово."
+             }
+           }}
+
+        {:error, :no_task_available} ->
+          {:ok,
+           %{
+             child: child_profile,
+             next_task: nil,
+             progress: progress,
+             session_state: %{
+               has_next_task: false,
+               message: "Все доступные задания пройдены. Можно отдохнуть или вернуться позже."
+             }
+           }}
+      end
     end
   end
 
@@ -314,6 +396,14 @@ defmodule Backend.Learning do
     end
   end
 
+  @doc "Saves an answer and returns the refreshed mobile learning-session state."
+  def submit_mobile_task_answer(child_profile_id, task_id, attrs \\ %{}) do
+    with {:ok, answer_result} <- submit_task_answer(child_profile_id, task_id, attrs),
+         {:ok, session} <- learning_session_for_child(child_profile_id) do
+      {:ok, Map.merge(answer_result, %{session: session})}
+    end
+  end
+
   @doc """
   Updates a task_attempt.
   """
@@ -442,6 +532,9 @@ defmodule Backend.Learning do
   end
 
   defp diagnostic_result(diagnostic_session_id) do
+    diagnostic_session = Repo.get!(DiagnosticSession, diagnostic_session_id)
+    child = Repo.get!(ChildProfile, diagnostic_session.child_profile_id)
+
     areas =
       from(diagnostic_answer in DiagnosticAnswer,
         join: task in Task,
@@ -460,16 +553,25 @@ defmodule Backend.Learning do
       |> Repo.all()
       |> Enum.map(&diagnostic_area_result/1)
 
+    recommended_focus = Enum.filter(areas, &(&1.result == :start_from_basics))
+    recommended_area = List.first(recommended_focus)
+
     %{
+      child: %{id: child.id, name: child.name, age: child.age},
       total_areas: length(areas),
       confident_areas: Enum.count(areas, &(&1.result == :ready_to_continue)),
+      areas_needing_basics: length(recommended_focus),
       areas: areas,
-      recommended_focus: Enum.filter(areas, &(&1.result == :start_from_basics))
+      recommended_focus: recommended_focus,
+      recommended_starting_area: recommended_area && recommended_area.area,
+      recommended_starting_skill_id: recommended_area && recommended_area.skill_id,
+      recommended_message: diagnostic_recommendation_message(recommended_area)
     }
   end
 
   defp diagnostic_area_result(%{is_correct: true} = area) do
     Map.merge(area, %{
+      area_label: area_label(area.area),
       result: :ready_to_continue,
       message: "Можно продолжать с заданиями текущего уровня."
     })
@@ -477,6 +579,7 @@ defmodule Backend.Learning do
 
   defp diagnostic_area_result(area) do
     Map.merge(area, %{
+      area_label: area_label(area.area),
       result: :start_from_basics,
       message: "Рекомендуем начать с базовых заданий и двигаться маленькими шагами."
     })
@@ -562,22 +665,31 @@ defmodule Backend.Learning do
     total_tasks = length(tasks)
     completed_tasks = MapSet.size(completed_task_ids)
 
+    status = skill_status(total_tasks, completed_tasks, attempts, deferred_task_ids)
+
+    incorrect_attempts_count =
+      Enum.count(attempts, fn {_skill_id, _task_id, is_correct, _hint_used} -> not is_correct end)
+
+    hints_used_count =
+      Enum.count(attempts, fn {_skill_id, _task_id, _is_correct, hint_used} -> hint_used end)
+
     %{
       id: skill.id,
       title: skill.title,
       area: skill.area,
-      status: skill_status(total_tasks, completed_tasks, attempts, deferred_task_ids),
+      area_label: area_label(skill.area),
+      status: status,
+      status_label: status_label(status),
+      status_description: status_description(status),
       total_tasks: total_tasks,
       completed_tasks: completed_tasks,
       completion_percentage: percentage(completed_tasks, total_tasks),
       attempts_count: length(attempts),
-      incorrect_attempts_count:
-        Enum.count(attempts, fn {_skill_id, _task_id, is_correct, _hint_used} ->
-          not is_correct
-        end),
-      hints_used_count:
-        Enum.count(attempts, fn {_skill_id, _task_id, _is_correct, hint_used} -> hint_used end),
-      tasks_needing_review_count: MapSet.size(deferred_task_ids)
+      incorrect_attempts_count: incorrect_attempts_count,
+      hints_used_count: hints_used_count,
+      tasks_needing_review_count: MapSet.size(deferred_task_ids),
+      recommendation_priority:
+        recommendation_priority(status, incorrect_attempts_count, hints_used_count)
     }
   end
 
@@ -628,15 +740,54 @@ defmodule Backend.Learning do
 
   defp build_recommendations(skills_progress) do
     skills_progress
-    |> Enum.filter(&(&1.status == :needs_review))
+    |> Enum.filter(&(&1.status in [:needs_review, :in_progress]))
+    |> Enum.reject(&(&1.recommendation_priority == :low))
+    |> Enum.sort_by(&priority_rank(&1.recommendation_priority))
     |> Enum.map(fn skill ->
       %{
         skill_id: skill.id,
+        priority: skill.recommendation_priority,
         title: "Повторить: #{skill.title}",
         message:
           "Было три сложных попытки без успешного ответа. Полезно вернуться к этому навыку в спокойном темпе и пройти более простые примеры."
       }
     end)
+  end
+
+  defp area_label("math"), do: "Счёт"
+  defp area_label("reading"), do: "Чтение"
+  defp area_label("logic"), do: "Логика"
+  defp area_label(area), do: area
+
+  defp status_label(:mastered), do: "Освоено"
+  defp status_label(:needs_review), do: "Нужно повторить"
+  defp status_label(:in_progress), do: "В процессе"
+  defp status_label(:not_started), do: "Не начато"
+
+  defp status_description(:mastered), do: "Все задания навыка выполнены правильно."
+
+  defp status_description(:needs_review),
+    do: "Есть задание, которое пока требует дополнительной поддержки."
+
+  defp status_description(:in_progress),
+    do: "Ребёнок уже начал практику и постепенно осваивает навык."
+
+  defp status_description(:not_started), do: "Практика по этому навыку ещё не началась."
+
+  defp recommendation_priority(:needs_review, incorrect, _hints) when incorrect >= 5, do: :high
+  defp recommendation_priority(:needs_review, _incorrect, _hints), do: :high
+  defp recommendation_priority(:in_progress, _incorrect, hints) when hints >= 2, do: :medium
+  defp recommendation_priority(_status, _incorrect, _hints), do: :low
+
+  defp priority_rank(:high), do: 0
+  defp priority_rank(:medium), do: 1
+  defp priority_rank(:low), do: 2
+
+  defp diagnostic_recommendation_message(nil),
+    do: "Диагностика пройдена уверенно. Можно продолжать задания текущего уровня."
+
+  defp diagnostic_recommendation_message(area) do
+    "Рекомендуем начать с базовых заданий по направлению «#{area.area_label}» и двигаться маленькими шагами."
   end
 
   defp percentage(_completed, 0), do: 0

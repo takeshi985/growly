@@ -26,6 +26,14 @@ Authentication is not implemented yet. Content Admin is an internal MVP tool
 for preparing educational content before the mobile application is built and
 must not be exposed as a public production admin panel.
 
+## Mobile API v1
+
+Open [`localhost:4000/admin/api-docs`](http://localhost:4000/admin/api-docs) for
+the browser reference. Mobile endpoints are versioned under `/api/mobile/v1`
+and include learning session, answer submission, parent progress, and initial
+diagnostic flows. Child-facing task payloads never expose `correct_answer` or
+staged hints.
+
 Ready to run in production? Please [check our deployment guides](https://phoenix.hexdocs.pm/deployment.html).
 
 ## Learn more

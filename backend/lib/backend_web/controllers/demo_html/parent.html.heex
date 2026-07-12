@@ -4,10 +4,15 @@
       href={~p"/demo"}
       class="rounded-xl px-3 py-2 font-bold text-slate-600 transition hover:bg-white"
     >← К демо</a>
-    <a
-      href={~p"/demo/child"}
-      class="rounded-xl bg-violet-50 px-4 py-2 font-bold text-violet-700 transition hover:bg-violet-100"
-    >Режим ребёнка</a>
+    <div class="flex flex-wrap gap-2">
+      <a
+        href={~p"/admin/content"}
+        class="rounded-xl bg-slate-100 px-4 py-2 font-bold text-slate-700"
+      >Content Admin</a><a
+        href={~p"/demo/child"}
+        class="rounded-xl bg-violet-50 px-4 py-2 font-bold text-violet-700 transition hover:bg-violet-100"
+      >Режим ребёнка</a>
+    </div>
   </nav>
 
   <header class="rounded-[2rem] bg-gradient-to-br from-slate-900 to-slate-700 p-7 text-white shadow-xl sm:p-10">
@@ -123,7 +128,9 @@
           :for={recommendation <- @progress.recommendations}
           class="mt-4 rounded-2xl bg-white/70 p-4"
         >
-          <p class="font-black text-slate-900">{recommendation.title}</p><p class="mt-1 leading-7 text-slate-700">
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="font-black text-slate-900">{recommendation.title}</p><span class="rounded-full bg-amber-200 px-2 py-1 text-xs font-black uppercase text-amber-900">{recommendation.priority}</span>
+          </div><p class="mt-1 leading-7 text-slate-700">
             {recommendation.message}
           </p>
         </div>
