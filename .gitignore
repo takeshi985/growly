@@ -1,0 +1,16 @@
+# Local editor and operating-system files
+.DS_Store
+.idea/
+.vscode/
+.elixir_ls/
+
+# Local runtime artifacts not covered by the Phoenix project ignore rules
+backend/.tmp/
+backend/erl_crash.dump
+backend/mix_lock_user*/
+backend/mix_pubsub_user*/
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
