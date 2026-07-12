@@ -119,6 +119,43 @@ defmodule Backend.Learning do
     end
   end
 
+  @doc """
+  Returns a parent-friendly progress report for a child.
+
+  Progress is calculated from recorded task attempts instead of being stored as
+  a separate value. This keeps the report consistent when educational content
+  or a child's answers change.
+  """
+  def progress_for_child(child_profile_id) do
+    case Repo.get(ChildProfile, child_profile_id) do
+      nil ->
+        {:error, :child_profile_not_found}
+
+      %ChildProfile{} = child_profile ->
+        skills = age_appropriate_skills(child_profile.age)
+        skill_ids = Enum.map(skills, & &1.id)
+        tasks_by_skill = tasks_by_skill(skill_ids)
+        attempts_by_skill = attempts_by_skill(child_profile.id, skill_ids)
+
+        skills_progress =
+          Enum.map(skills, fn skill ->
+            build_skill_progress(
+              skill,
+              Map.get(tasks_by_skill, skill.id, []),
+              Map.get(attempts_by_skill, skill.id, [])
+            )
+          end)
+
+        {:ok,
+         %{
+           child: %{id: child_profile.id, name: child_profile.name, age: child_profile.age},
+           summary: build_progress_summary(skills_progress),
+           skills: skills_progress,
+           recommendations: build_recommendations(skills_progress)
+         }}
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Task attempts
   # ---------------------------------------------------------------------------
@@ -278,6 +315,126 @@ defmodule Backend.Learning do
       can_continue: true
     }
   end
+
+  defp age_appropriate_skills(age) do
+    from(skill in Skill,
+      where: skill.age_min <= ^age and skill.age_max >= ^age,
+      order_by: [asc: skill.area, asc: skill.id]
+    )
+    |> Repo.all()
+  end
+
+  defp tasks_by_skill([]), do: %{}
+
+  defp tasks_by_skill(skill_ids) do
+    from(task in Task, where: task.skill_id in ^skill_ids)
+    |> Repo.all()
+    |> Enum.group_by(& &1.skill_id)
+  end
+
+  defp attempts_by_skill(_child_profile_id, []), do: %{}
+
+  defp attempts_by_skill(child_profile_id, skill_ids) do
+    from(task_attempt in TaskAttempt,
+      join: task in Task,
+      on: task.id == task_attempt.task_id,
+      where: task_attempt.child_profile_id == ^child_profile_id and task.skill_id in ^skill_ids,
+      select:
+        {task.skill_id, task_attempt.task_id, task_attempt.is_correct, task_attempt.hint_used}
+    )
+    |> Repo.all()
+    |> Enum.group_by(fn {skill_id, _task_id, _is_correct, _hint_used} -> skill_id end)
+  end
+
+  defp build_skill_progress(skill, tasks, attempts) do
+    completed_task_ids =
+      attempts
+      |> Enum.filter(fn {_skill_id, _task_id, is_correct, _hint_used} -> is_correct end)
+      |> Enum.map(fn {_skill_id, task_id, _is_correct, _hint_used} -> task_id end)
+      |> MapSet.new()
+
+    deferred_task_ids = deferred_task_ids(attempts)
+    total_tasks = length(tasks)
+    completed_tasks = MapSet.size(completed_task_ids)
+
+    %{
+      id: skill.id,
+      title: skill.title,
+      area: skill.area,
+      status: skill_status(total_tasks, completed_tasks, attempts, deferred_task_ids),
+      total_tasks: total_tasks,
+      completed_tasks: completed_tasks,
+      completion_percentage: percentage(completed_tasks, total_tasks),
+      attempts_count: length(attempts),
+      incorrect_attempts_count:
+        Enum.count(attempts, fn {_skill_id, _task_id, is_correct, _hint_used} ->
+          not is_correct
+        end),
+      hints_used_count:
+        Enum.count(attempts, fn {_skill_id, _task_id, _is_correct, hint_used} -> hint_used end),
+      tasks_needing_review_count: MapSet.size(deferred_task_ids)
+    }
+  end
+
+  defp deferred_task_ids(attempts) do
+    attempts
+    |> Enum.group_by(fn {_skill_id, task_id, _is_correct, _hint_used} -> task_id end)
+    |> Enum.reduce(MapSet.new(), fn {task_id, task_attempts}, deferred_task_ids ->
+      solved? =
+        Enum.any?(task_attempts, fn {_skill_id, _task_id, is_correct, _hint_used} ->
+          is_correct
+        end)
+
+      incorrect_attempts_count =
+        Enum.count(task_attempts, fn {_skill_id, _task_id, is_correct, _hint_used} ->
+          not is_correct
+        end)
+
+      if not solved? and incorrect_attempts_count >= 3 do
+        MapSet.put(deferred_task_ids, task_id)
+      else
+        deferred_task_ids
+      end
+    end)
+  end
+
+  defp skill_status(total_tasks, completed_tasks, attempts, deferred_task_ids) do
+    cond do
+      total_tasks > 0 and completed_tasks == total_tasks -> :mastered
+      MapSet.size(deferred_task_ids) > 0 -> :needs_review
+      attempts == [] -> :not_started
+      true -> :in_progress
+    end
+  end
+
+  defp build_progress_summary(skills_progress) do
+    total_tasks = Enum.sum_by(skills_progress, & &1.total_tasks)
+    completed_tasks = Enum.sum_by(skills_progress, & &1.completed_tasks)
+
+    %{
+      total_skills: length(skills_progress),
+      mastered_skills: Enum.count(skills_progress, &(&1.status == :mastered)),
+      skills_needing_review: Enum.count(skills_progress, &(&1.status == :needs_review)),
+      total_tasks: total_tasks,
+      completed_tasks: completed_tasks,
+      completion_percentage: percentage(completed_tasks, total_tasks)
+    }
+  end
+
+  defp build_recommendations(skills_progress) do
+    skills_progress
+    |> Enum.filter(&(&1.status == :needs_review))
+    |> Enum.map(fn skill ->
+      %{
+        skill_id: skill.id,
+        title: "Повторить: #{skill.title}",
+        message: "В этом навыке ребенку пока нужна дополнительная практика и поддержка."
+      }
+    end)
+  end
+
+  defp percentage(_completed, 0), do: 0
+  defp percentage(completed, total), do: round(completed / total * 100)
 
   defp next_attempt_number(child_profile_id, task_id) do
     previous_attempts_count =

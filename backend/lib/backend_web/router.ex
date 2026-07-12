@@ -31,6 +31,7 @@ defmodule BackendWeb.Router do
     resources("/task_attempts", TaskAttemptController, except: [:new, :edit])
 
     get("/children/:child_id/next_task", ChildNextTaskController, :show)
+    get("/children/:child_id/progress", ChildProgressController, :show)
     post("/children/:child_id/tasks/:task_id/answer", ChildTaskAnswerController, :create)
   end
 
