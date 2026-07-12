@@ -32,6 +32,8 @@ defmodule BackendWeb.Router do
 
     get("/children/:child_id/next_task", ChildNextTaskController, :show)
     get("/children/:child_id/progress", ChildProgressController, :show)
+    post("/children/:child_id/diagnostic_sessions", ChildDiagnosticController, :create)
+    post("/diagnostic_sessions/:session_id/answers", DiagnosticAnswerController, :create)
     post("/children/:child_id/tasks/:task_id/answer", ChildTaskAnswerController, :create)
   end
 
