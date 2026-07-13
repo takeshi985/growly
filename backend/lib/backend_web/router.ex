@@ -99,6 +99,8 @@ defmodule BackendWeb.Router do
 
     get("/health", MobileV1Controller, :health)
     get("/demo/bootstrap", MobileV1Controller, :demo_bootstrap)
+    post("/children/:child_id/pairing_sessions", MobileV1Controller, :create_pairing_session)
+    post("/pairing_sessions/claim", MobileV1Controller, :claim_pairing_session)
     get("/catalog", MobileV1Controller, :catalog)
     get("/courses/:course_id", MobileV1Controller, :course)
     get("/courses/:course_id/map", MobileV1Controller, :course_map)

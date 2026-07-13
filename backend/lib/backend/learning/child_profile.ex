@@ -3,12 +3,14 @@ defmodule Backend.Learning.ChildProfile do
   import Ecto.Changeset
 
   alias Backend.Accounts.Parent
+  alias Backend.Learning.PairingSession
 
   schema "child_profiles" do
     field(:name, :string)
     field(:age, :integer)
 
     belongs_to(:parent, Parent)
+    has_many(:pairing_sessions, PairingSession)
 
     timestamps(type: :utc_datetime)
   end

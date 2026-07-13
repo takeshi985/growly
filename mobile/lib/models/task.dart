@@ -18,15 +18,21 @@ class GrowlyTask {
   final String areaLabel;
   final String type;
   final String question;
-  final Map<String, String> options;
+
+  /// Task-specific payload. Simple choice tasks use string labels; interactive
+  /// tasks may use nested data. Answer checking remains on the backend.
+  final Map<String, dynamic> options;
   final int difficulty;
 
   factory GrowlyTask.fromJson(Map<String, dynamic> json) {
     final rawOptions = json['options'];
-    final options = <String, String>{};
+    final options = <String, dynamic>{};
     if (rawOptions is Map) {
       for (final entry in rawOptions.entries) {
-        options[entry.key.toString()] = entry.value.toString();
+        final value = entry.value;
+        options[entry.key.toString()] = value is Map || value is List
+            ? value
+            : value.toString();
       }
     }
 

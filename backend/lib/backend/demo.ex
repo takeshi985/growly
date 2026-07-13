@@ -41,6 +41,27 @@ defmodule Backend.Demo do
     },
     %{
       area: "math",
+      title: "Распределяет предметы по количеству",
+      task: %{
+        type: "drag_count_to_baskets",
+        question: "Сделай так, чтобы в левой корзинке было 2 яблока, а в правой — 3 яблока.",
+        options: %{
+          "item" => "apple",
+          "total" => 5,
+          "targets" => [
+            %{"id" => "left", "label" => "Левая корзинка", "required_count" => 2},
+            %{"id" => "right", "label" => "Правая корзинка", "required_count" => 3}
+          ]
+        },
+        correct_answer: "left=2;right=3",
+        difficulty: 1,
+        hint1: "Положи яблоки по одному и считай каждую корзинку.",
+        hint2: "В левой корзинке должно быть 2 яблока, а в правой — 3.",
+        explanation: "Получилось 2 яблока слева и 3 справа — всего 5."
+      }
+    },
+    %{
+      area: "math",
       title: "Сравнивает больше и меньше",
       task: %{
         type: "multiple_choice",
@@ -311,6 +332,15 @@ defmodule Backend.Demo do
              "Сравнивает больше и меньше",
              2
            ),
+         {:ok, baskets_lesson} <-
+           ensure_lesson(
+             math_unit,
+             records,
+             "Яблоки по корзинкам",
+             "apples-to-baskets",
+             "Распределяет предметы по количеству",
+             3
+           ),
          {:ok, reading_lesson} <-
            ensure_lesson(
              reading_unit,
@@ -333,7 +363,7 @@ defmodule Backend.Demo do
        %{
          course: course,
          units: [math_unit, reading_unit, logic_unit],
-         lessons: [math_lesson, compare_lesson, reading_lesson, logic_lesson]
+         lessons: [math_lesson, compare_lesson, baskets_lesson, reading_lesson, logic_lesson]
        }}
     end
   end
@@ -419,8 +449,8 @@ defmodule Backend.Demo do
   defp ensure_workbook_pages(workbook, lessons) do
     page_specs = [
       {1, Enum.at(lessons, 0), "Считаем предметы", "growly-math-page-1"},
-      {2, Enum.at(lessons, 2), "Буквы и слоги", "growly-reading-page-2"},
-      {3, Enum.at(lessons, 3), "Ищем лишнее", "growly-logic-page-3"}
+      {2, Enum.at(lessons, 3), "Буквы и слоги", "growly-reading-page-2"},
+      {3, Enum.at(lessons, 4), "Ищем лишнее", "growly-logic-page-3"}
     ]
 
     Enum.reduce_while(page_specs, {:ok, []}, fn {number, lesson, title, token}, {:ok, pages} ->

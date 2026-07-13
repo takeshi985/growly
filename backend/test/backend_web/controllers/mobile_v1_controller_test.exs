@@ -20,6 +20,87 @@ defmodule BackendWeb.MobileV1ControllerTest do
            }
   end
 
+  test "pairing session creates an eight-digit code and child-safe QR payload", %{conn: conn} do
+    child = child_profile_fixture(%{name: "Миша", age: 6})
+
+    data =
+      conn
+      |> post(~p"/api/mobile/v1/children/#{child.id}/pairing_sessions")
+      |> json_response(201)
+      |> Map.fetch!("data")
+
+    assert data["child"] == %{"id" => child.id, "name" => "Миша", "age" => 6}
+    assert data["pairing"]["code"] =~ ~r/^\d{8}$/
+    assert String.starts_with?(data["pairing"]["qr_payload"], "growly://pair?token=")
+    assert data["pairing"]["token"] != ""
+    refute inspect(data) =~ "correct_answer"
+  end
+
+  test "pairing claim works by code and token", %{conn: conn} do
+    code_child = child_profile_fixture(%{age: 6})
+
+    code_pairing =
+      conn
+      |> post(~p"/api/mobile/v1/children/#{code_child.id}/pairing_sessions")
+      |> json_response(201)
+      |> get_in(["data", "pairing"])
+
+    code_claim =
+      conn
+      |> post(~p"/api/mobile/v1/pairing_sessions/claim", %{code: code_pairing["code"]})
+      |> json_response(200)
+      |> Map.fetch!("data")
+
+    assert code_claim["child"]["id"] == code_child.id
+    assert code_claim["links"]["progress"] == "/api/mobile/v1/children/#{code_child.id}/progress"
+
+    token_child = child_profile_fixture(%{age: 6})
+
+    token_pairing =
+      conn
+      |> post(~p"/api/mobile/v1/children/#{token_child.id}/pairing_sessions")
+      |> json_response(201)
+      |> get_in(["data", "pairing"])
+
+    token_claim =
+      conn
+      |> post(~p"/api/mobile/v1/pairing_sessions/claim", %{token: token_pairing["token"]})
+      |> json_response(200)
+      |> Map.fetch!("data")
+
+    assert token_claim["child"]["id"] == token_child.id
+  end
+
+  test "expired and invalid pairing codes fail safely", %{conn: conn} do
+    child = child_profile_fixture(%{age: 6})
+
+    pairing =
+      conn
+      |> post(~p"/api/mobile/v1/children/#{child.id}/pairing_sessions")
+      |> json_response(201)
+      |> get_in(["data", "pairing"])
+
+    assert {:ok, pairing_session} = Backend.Learning.get_pairing_session_by_code(pairing["code"])
+
+    pairing_session
+    |> Ecto.Changeset.change(
+      expires_at: DateTime.utc_now() |> DateTime.add(-1, :second) |> DateTime.truncate(:second)
+    )
+    |> Backend.Repo.update!()
+
+    conn
+    |> post(~p"/api/mobile/v1/pairing_sessions/claim", %{code: pairing["code"]})
+    |> json_response(422)
+    |> get_in(["errors", "pairing"])
+    |> then(&assert(&1 == ["code expired"]))
+
+    conn
+    |> post(~p"/api/mobile/v1/pairing_sessions/claim", %{code: "12345678"})
+    |> json_response(404)
+    |> get_in(["errors", "pairing"])
+    |> then(&assert(&1 == ["code not found"]))
+  end
+
   test "demo bootstrap creates stable data and returns child links without resetting progress", %{
     conn: conn
   } do
@@ -108,6 +189,31 @@ defmodule BackendWeb.MobileV1ControllerTest do
     assert data["next_task"]["id"] == next_task.id
     assert data["progress_summary"]["completed_tasks"] == 1
     assert data["progress_summary"]["completion_percentage"] == 50
+  end
+
+  test "drag count task is graded on the backend without exposing its answer key", %{conn: conn} do
+    child = child_profile_fixture(%{age: 6})
+    skill = skill_fixture(%{area: "math", age_min: 5, age_max: 7})
+
+    task =
+      task_fixture(%{
+        skill: skill,
+        type: "drag_count_to_baskets",
+        options: %{"item" => "apple", "total" => 5},
+        correct_answer: "left=2;right=3"
+      })
+
+    session =
+      conn
+      |> get(~p"/api/mobile/v1/children/#{child.id}/session")
+      |> json_response(200)
+      |> Map.fetch!("data")
+
+    assert session["next_task"]["id"] == task.id
+    refute Map.has_key?(session["next_task"], "correct_answer")
+
+    answer = submit_answer(conn, child.id, task.id, "left=2;right=3")
+    assert answer["task_attempt"]["is_correct"] == true
   end
 
   test "three wrong answers return hint1, hint2, then review_later and move forward", %{

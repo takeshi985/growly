@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../api/growly_api_client.dart';
 import '../models/child_profile.dart';
 import '../models/child_session.dart';
 import '../models/task.dart';
+import '../widgets/drag_count_task.dart';
 import '../widgets/error_state.dart';
 import '../widgets/feedback_card.dart';
 import '../widgets/growly_button.dart';
 import '../widgets/loading_state.dart';
 import '../widgets/task_option_card.dart';
-import 'parent_progress_screen.dart';
 
 class ChildTaskScreen extends StatefulWidget {
   const ChildTaskScreen({
@@ -17,10 +18,8 @@ class ChildTaskScreen extends StatefulWidget {
     required this.apiClient,
     required this.child,
   });
-
   final GrowlyApiClient apiClient;
   final ChildProfile child;
-
   @override
   State<ChildTaskScreen> createState() => _ChildTaskScreenState();
 }
@@ -38,7 +37,17 @@ class _ChildTaskScreenState extends State<ChildTaskScreen> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     _loadSession();
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    super.dispose();
   }
 
   Future<void> _loadSession() async {
@@ -58,11 +67,11 @@ class _ChildTaskScreenState extends State<ChildTaskScreen> {
         _loading = false;
       });
     } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = error;
-        _loading = false;
-      });
+      if (mounted)
+        setState(() {
+          _error = error;
+          _loading = false;
+        });
     }
   }
 
@@ -85,22 +94,22 @@ class _ChildTaskScreenState extends State<ChildTaskScreen> {
         _submitting = false;
       });
     } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = error;
-        _submitting = false;
-      });
+      if (mounted)
+        setState(() {
+          _error = error;
+          _submitting = false;
+        });
     }
   }
 
   void _continue() {
     final next = _answerResult?.nextTask;
-    final currentTaskId = _task?.id;
+    final currentId = _task?.id;
     setState(() {
       _task = next;
       _selectedAnswer = null;
       _answerResult = null;
-      if (next?.id != currentTaskId) _hintWasShown = false;
+      if (next?.id != currentId) _hintWasShown = false;
     });
   }
 
@@ -109,111 +118,110 @@ class _ChildTaskScreenState extends State<ChildTaskScreen> {
     appBar: AppBar(title: const Text('Задание Growly')),
     body: SafeArea(child: _body()),
   );
-
   Widget _body() {
     if (_loading) return const LoadingState();
-    if (_error != null) {
+    if (_error != null)
       return ErrorState(message: _error.toString(), onRetry: _loadSession);
-    }
     final task = _task;
-    if (task == null) {
+    if (task == null)
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('🌟', style: TextStyle(fontSize: 58)),
-              const SizedBox(height: 14),
-              Text(
-                'На сегодня всё! Можно отдохнуть.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              if (_session?.message.isNotEmpty ?? false) ...[
-                const SizedBox(height: 10),
-                Text(_session!.message, textAlign: TextAlign.center),
-              ],
-              const SizedBox(height: 22),
-              FilledButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => ParentProgressScreen(
-                      apiClient: widget.apiClient,
-                      childId: widget.child.id,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.insights_rounded),
-                label: const Text('Посмотреть прогресс'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Вернуться на главную'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final feedback = _answerResult?.feedback;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-      children: [
-        Text(
-          '${widget.child.name}, ${widget.child.age} лет',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 8,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Chip(label: Text(task.areaLabel)),
-            Chip(label: Text('Сложность ${task.difficulty}')),
+            const Text('🌟', style: TextStyle(fontSize: 58)),
+            const SizedBox(height: 14),
+            Text(
+              'На сегодня всё!',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 12),
+            Text(_session?.message ?? '', textAlign: TextAlign.center),
+            const SizedBox(height: 18),
+            OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Вернуться'),
+            ),
           ],
         ),
-        const SizedBox(height: 12),
-        Text(task.skillTitle, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        Text(
-          task.question,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+      );
+    final feedback = _answerResult?.feedback;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 960),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(28, 14, 28, 24),
+          children: [
+            Row(
+              children: [
+                Text(
+                  '${widget.child.name} · ${task.areaLabel}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                Chip(label: Text(task.skillTitle)),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              task.question,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                height: 1.15,
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (task.type == 'drag_count_to_baskets')
+              DragCountTask(
+                options: task.options,
+                enabled: !_submitting && feedback == null,
+                onChanged: (answer) => setState(() => _selectedAnswer = answer),
+              )
+            else
+              for (final option in task.options.entries) ...[
+                TaskOptionCard(
+                  value: option.key,
+                  label: option.value.toString(),
+                  selected: _selectedAnswer == option.key,
+                  enabled: !_submitting && feedback == null,
+                  onTap: () => setState(() => _selectedAnswer = option.key),
+                ),
+                const SizedBox(height: 10),
+              ],
+            const SizedBox(height: 12),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: feedback == null
+                  ? GrowlyButton(
+                      key: const ValueKey('submit'),
+                      label: _submitting ? 'Проверяем…' : 'Ответить',
+                      icon: Icons.check_rounded,
+                      onPressed: _selectedAnswer == null || _submitting
+                          ? null
+                          : _submit,
+                    )
+                  : Column(
+                      key: const ValueKey('feedback'),
+                      children: [
+                        FeedbackCard(feedback: feedback),
+                        const SizedBox(height: 16),
+                        AnimatedScale(
+                          duration: const Duration(milliseconds: 180),
+                          scale: 1,
+                          child: GrowlyButton(
+                            label: _answerResult?.nextTask == null
+                                ? 'Завершить занятие'
+                                : 'Продолжить',
+                            icon: Icons.arrow_forward_rounded,
+                            onPressed: _continue,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
         ),
-        const SizedBox(height: 18),
-        for (final option in task.options.entries) ...[
-          TaskOptionCard(
-            value: option.key,
-            label: option.value,
-            selected: _selectedAnswer == option.key,
-            enabled: !_submitting && feedback == null,
-            onTap: () => setState(() => _selectedAnswer = option.key),
-          ),
-          const SizedBox(height: 10),
-        ],
-        if (feedback != null) ...[
-          const SizedBox(height: 6),
-          FeedbackCard(feedback: feedback),
-          const SizedBox(height: 16),
-          GrowlyButton(
-            label: _answerResult?.nextTask == null
-                ? 'Завершить занятие'
-                : 'Продолжить',
-            icon: Icons.arrow_forward_rounded,
-            onPressed: _continue,
-          ),
-        ] else ...[
-          const SizedBox(height: 8),
-          GrowlyButton(
-            label: _submitting ? 'Проверяем…' : 'Ответить',
-            icon: Icons.check_rounded,
-            onPressed: _selectedAnswer == null || _submitting ? null : _submit,
-          ),
-        ],
-      ],
+      ),
     );
   }
 }
