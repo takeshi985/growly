@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'api/growly_api_client.dart';
-import 'screens/home_screen.dart';
+import 'screens/child_home_screen.dart';
+import 'screens/parent_home_screen.dart';
+import 'screens/role_selection_screen.dart';
+import 'storage/device_preferences.dart';
 
 class GrowlyApp extends StatefulWidget {
   const GrowlyApp({super.key, this.apiClient});
@@ -14,11 +17,29 @@ class GrowlyApp extends StatefulWidget {
 
 class _GrowlyAppState extends State<GrowlyApp> {
   late final GrowlyApiClient _apiClient;
+  final DevicePreferences _preferences = DevicePreferences();
+  DeviceSetup? _setup;
 
   @override
   void initState() {
     super.initState();
     _apiClient = widget.apiClient ?? GrowlyApiClient();
+    _loadSetup();
+  }
+
+  Future<void> _loadSetup() async {
+    final setup = await _preferences.load();
+    if (mounted) setState(() => _setup = setup);
+  }
+
+  Future<void> _selectRole(DeviceRole role) async {
+    await _preferences.saveRole(role);
+    await _loadSetup();
+  }
+
+  Future<void> _resetRole() async {
+    await _preferences.clear();
+    await _loadSetup();
   }
 
   @override
@@ -60,6 +81,22 @@ class _GrowlyAppState extends State<GrowlyApp> {
         ),
       ),
     ),
-    home: HomeScreen(apiClient: _apiClient),
+    home: _setup == null
+        ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+        : _setup!.role == null
+        ? RoleSelectionScreen(onSelected: _selectRole)
+        : _setup!.role == DeviceRole.child
+        ? ChildHomeScreen(
+            apiClient: _apiClient,
+            preferences: _preferences,
+            onResetRole: _resetRole,
+          )
+        : ParentHomeScreen(
+            apiClient: _apiClient,
+            preferences: _preferences,
+            setup: _setup!,
+            onSetupChanged: _loadSetup,
+            onResetRole: _resetRole,
+          ),
   );
 }

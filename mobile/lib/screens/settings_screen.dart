@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../api/growly_api_client.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, required this.apiClient});
+  const SettingsScreen({super.key, required this.apiClient, this.onResetRole});
 
   final GrowlyApiClient apiClient;
+  final Future<void> Function()? onResetRole;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -88,6 +89,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
+          if (widget.onResetRole != null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await widget.onResetRole!();
+                if (context.mounted)
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+              icon: const Icon(Icons.restart_alt_rounded),
+              label: const Text('Сбросить роль устройства'),
+            ),
+          ],
           const SizedBox(height: 18),
           const _HelpCard(
             title: 'Android Emulator',

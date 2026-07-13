@@ -21,6 +21,34 @@ defmodule BackendWeb.MobileV1JSON do
     }
   end
 
+  def pairing_session(%{child: child, pairing: pairing}) do
+    %{
+      data: %{
+        child: %{id: child.id, name: child.name, age: child.age},
+        pairing: %{
+          code: pairing.code,
+          token: pairing.token,
+          expires_at: pairing.expires_at,
+          qr_payload: "growly://pair?token=#{pairing.token}"
+        }
+      }
+    }
+  end
+
+  def pairing_claim(%{child: child}) do
+    child_id = child.id
+
+    %{
+      data: %{
+        child: %{id: child_id, name: child.name, age: child.age},
+        links: %{
+          progress: "/api/mobile/v1/children/#{child_id}/progress",
+          lesson_map: "/api/mobile/v1/children/#{child_id}/lesson_map"
+        }
+      }
+    }
+  end
+
   def session(session), do: %{data: session_data(session)}
 
   def catalog(courses) do

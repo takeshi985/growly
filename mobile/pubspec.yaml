@@ -32,6 +32,8 @@ dependencies:
     sdk: flutter
 
   http: ^1.6.0
+  qr_flutter: ^4.1.0
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
@@ -54,6 +56,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/characters/
+    - assets/tasks/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

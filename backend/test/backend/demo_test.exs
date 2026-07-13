@@ -23,11 +23,12 @@ defmodule Backend.DemoTest do
 
     assert Enum.sort(Enum.uniq(Enum.map(first.skills, & &1.area))) == ["logic", "math", "reading"]
     assert first.parent.email == "demo-parent@growly.local"
-    assert length(first.skills) == 12
-    assert length(first.tasks) == 12
+    assert length(first.skills) == 13
+    assert length(first.tasks) == 13
     assert first.course.slug == "school-readiness-5-7"
     assert length(first.units) == 3
-    assert length(first.lessons) == 4
+    assert length(first.lessons) == 5
+    assert Enum.any?(first.tasks, &(&1.type == "drag_count_to_baskets"))
     assert first.workbook.slug == "growly-first-steps"
     assert length(first.workbook_pages) == 3
     assert Enum.all?(first.workbook_pages, &is_binary(&1.qr_code_token))

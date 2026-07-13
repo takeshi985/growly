@@ -22,6 +22,37 @@ defmodule BackendWeb.MobileV1Controller do
     end
   end
 
+  def create_pairing_session(conn, %{"child_id" => child_id}) do
+    case Learning.create_pairing_session_for_child(child_id) do
+      {:ok, pairing_data} ->
+        conn
+        |> put_status(:created)
+        |> json(MobileV1JSON.pairing_session(pairing_data))
+
+      {:error, :child_profile_not_found} ->
+        child_not_found(conn)
+
+      {:error, :pairing_session_unavailable} ->
+        conn
+        |> put_status(:service_unavailable)
+        |> json(%{errors: %{pairing: ["could not create pairing session"]}})
+    end
+  end
+
+  def claim_pairing_session(conn, params) do
+    claim_result =
+      cond do
+        is_binary(params["code"]) -> Learning.claim_pairing_session_by_code(params["code"])
+        is_binary(params["token"]) -> Learning.claim_pairing_session_by_token(params["token"])
+        true -> {:error, :pairing_session_not_found}
+      end
+
+    case claim_result do
+      {:ok, pairing_data} -> json(conn, MobileV1JSON.pairing_claim(pairing_data))
+      {:error, reason} -> pairing_claim_error(conn, reason)
+    end
+  end
+
   def catalog(conn, _params) do
     json(conn, MobileV1JSON.catalog(Content.list_published_courses_with_curriculum()))
   end
@@ -141,5 +172,23 @@ defmodule BackendWeb.MobileV1Controller do
     |> put_status(:unprocessable_entity)
     |> put_view(json: BackendWeb.ChangesetJSON)
     |> render(:error, changeset: changeset)
+  end
+
+  defp pairing_claim_error(conn, :pairing_session_not_found) do
+    conn
+    |> put_status(:not_found)
+    |> json(%{errors: %{pairing: ["code not found"]}})
+  end
+
+  defp pairing_claim_error(conn, :pairing_session_expired) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: %{pairing: ["code expired"]}})
+  end
+
+  defp pairing_claim_error(conn, :pairing_session_already_claimed) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: %{pairing: ["code already claimed"]}})
   end
 end

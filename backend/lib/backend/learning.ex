@@ -15,6 +15,7 @@ defmodule Backend.Learning do
   alias Backend.Learning.ChildProfile
   alias Backend.Learning.DiagnosticAnswer
   alias Backend.Learning.DiagnosticSession
+  alias Backend.Learning.PairingSession
   alias Backend.Learning.TaskAttempt
 
   @diagnostic_areas ["math", "reading", "logic"]
@@ -67,6 +68,132 @@ defmodule Backend.Learning do
   """
   def change_child_profile(%ChildProfile{} = child_profile, attrs \\ %{}) do
     ChildProfile.changeset(child_profile, attrs)
+  end
+
+  # ---------------------------------------------------------------------------
+  # Child/parent device pairing
+  # ---------------------------------------------------------------------------
+
+  @pairing_session_ttl_seconds 10 * 60
+
+  @doc """
+  Returns an active pairing session for a child or creates a fresh one.
+
+  Pairing is deliberately device-scoped for the MVP: claiming a code grants a
+  parent device enough information to read the child's progress, but creates no
+  parent account or production authentication session.
+  """
+  def create_pairing_session_for_child(child_profile_id) do
+    with {:ok, child} <- fetch_child_profile(child_profile_id) do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      case active_pairing_session_for_child(child.id, now) do
+        %PairingSession{} = pairing -> {:ok, %{child: child, pairing: pairing}}
+        nil -> create_fresh_pairing_session(child, now)
+      end
+    end
+  end
+
+  @doc "Returns a pairing session by its eight-digit code."
+  def get_pairing_session_by_code(code) when is_binary(code) do
+    get_pairing_session_by(:code, code)
+  end
+
+  def get_pairing_session_by_code(_code), do: {:error, :pairing_session_not_found}
+
+  @doc "Claims a currently active pairing session by its eight-digit code."
+  def claim_pairing_session_by_code(code) when is_binary(code) do
+    claim_pairing_session(:code, code)
+  end
+
+  def claim_pairing_session_by_code(_code), do: {:error, :pairing_session_not_found}
+
+  @doc "Claims a currently active pairing session by the token embedded in a QR payload."
+  def claim_pairing_session_by_token(token) when is_binary(token) do
+    claim_pairing_session(:token, token)
+  end
+
+  def claim_pairing_session_by_token(_token), do: {:error, :pairing_session_not_found}
+
+  @doc "Returns whether a pairing session can no longer be claimed."
+  def pairing_session_expired?(%PairingSession{} = pairing_session) do
+    DateTime.compare(pairing_session.expires_at, DateTime.utc_now()) != :gt
+  end
+
+  defp active_pairing_session_for_child(child_profile_id, now) do
+    from(pairing in PairingSession,
+      where:
+        pairing.child_profile_id == ^child_profile_id and
+          is_nil(pairing.claimed_at) and pairing.expires_at > ^now,
+      order_by: [desc: pairing.inserted_at],
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
+  defp create_fresh_pairing_session(child, now, attempts \\ 0)
+
+  defp create_fresh_pairing_session(_child, _now, attempts) when attempts >= 3 do
+    {:error, :pairing_session_unavailable}
+  end
+
+  defp create_fresh_pairing_session(child, now, attempts) do
+    attrs = %{
+      code: pairing_code(),
+      token: pairing_token(),
+      expires_at: DateTime.add(now, @pairing_session_ttl_seconds, :second)
+    }
+
+    %PairingSession{}
+    |> PairingSession.create_changeset(child.id, attrs)
+    |> Repo.insert()
+    |> case do
+      {:ok, pairing} -> {:ok, %{child: child, pairing: pairing}}
+      {:error, %Ecto.Changeset{}} -> create_fresh_pairing_session(child, now, attempts + 1)
+    end
+  end
+
+  defp get_pairing_session_by(field, value) do
+    case Repo.get_by(PairingSession, [{field, value}]) do
+      nil -> {:error, :pairing_session_not_found}
+      pairing -> {:ok, Repo.preload(pairing, :child_profile)}
+    end
+  end
+
+  defp claim_pairing_session(field, value) do
+    with {:ok, pairing} <- get_pairing_session_by(field, value),
+         :ok <- ensure_pairing_session_claimable(pairing),
+         {:ok, claimed_pairing} <-
+           pairing
+           |> PairingSession.claim_changeset(DateTime.utc_now() |> DateTime.truncate(:second))
+           |> Repo.update() do
+      {:ok, %{child: claimed_pairing.child_profile, pairing: claimed_pairing}}
+    end
+  end
+
+  defp ensure_pairing_session_claimable(%PairingSession{claimed_at: claimed_at})
+       when not is_nil(claimed_at),
+       do: {:error, :pairing_session_already_claimed}
+
+  defp ensure_pairing_session_claimable(%PairingSession{} = pairing) do
+    if pairing_session_expired?(pairing) do
+      {:error, :pairing_session_expired}
+    else
+      :ok
+    end
+  end
+
+  defp pairing_code do
+    :crypto.strong_rand_bytes(4)
+    |> :binary.decode_unsigned()
+    |> rem(100_000_000)
+    |> Integer.to_string()
+    |> String.pad_leading(8, "0")
+  end
+
+  defp pairing_token do
+    :crypto.strong_rand_bytes(24)
+    |> Base.url_encode64(padding: false)
   end
 
   @doc """

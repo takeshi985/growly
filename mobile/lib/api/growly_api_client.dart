@@ -8,6 +8,7 @@ import '../models/child_session.dart';
 import '../models/curriculum.dart';
 import '../models/demo_bootstrap.dart';
 import '../models/progress.dart';
+import '../models/pairing.dart';
 import 'api_exception.dart';
 
 class GrowlyApiClient {
@@ -61,6 +62,27 @@ class GrowlyApiClient {
   Future<ParentProgress> parentProgress(int childId) async {
     return ParentProgress.fromJson(
       await _get('/api/mobile/v1/children/$childId/progress'),
+    );
+  }
+
+  Future<PairingOffer> createPairingSession(int childId) async {
+    return PairingOffer.fromJson(
+      await _post(
+        '/api/mobile/v1/children/$childId/pairing_sessions',
+        const {},
+      ),
+    );
+  }
+
+  Future<PairingClaim> claimPairingByCode(String code) async {
+    return PairingClaim.fromJson(
+      await _post('/api/mobile/v1/pairing_sessions/claim', {'code': code}),
+    );
+  }
+
+  Future<PairingClaim> claimPairingByToken(String token) async {
+    return PairingClaim.fromJson(
+      await _post('/api/mobile/v1/pairing_sessions/claim', {'token': token}),
     );
   }
 

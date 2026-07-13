@@ -1,40 +1,29 @@
-import 'dart:convert';
-
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
-import 'package:mobile/api/growly_api_client.dart';
-import 'package:mobile/app.dart';
+import 'package:mobile/screens/role_selection_screen.dart';
+import 'package:mobile/storage/device_preferences.dart';
 
 void main() {
-  testWidgets('Growly app renders the home title', (tester) async {
-    final client = MockClient((request) async {
-      return http.Response(
-        jsonEncode({
-          'data': {
-            'parent': {'id': 1, 'email': 'demo-parent@growly.local'},
-            'child': {'id': 2, 'name': 'Миша', 'age': 6},
-            'links': {
-              'session': '/api/mobile/v1/children/2/session',
-              'progress': '/api/mobile/v1/children/2/progress',
-              'lesson_map': '/api/mobile/v1/children/2/lesson_map',
-            },
-          },
-        }),
-        200,
-        headers: {'content-type': 'application/json; charset=utf-8'},
-      );
-    });
-
+  testWidgets('role selection renders child and parent choices', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-      GrowlyApp(
-        apiClient: GrowlyApiClient(client: client, baseUrl: 'http://test'),
+      MaterialApp(home: RoleSelectionScreen(onSelected: (_) async {})),
+    );
+    expect(find.text('Growly'), findsOneWidget);
+    expect(find.text('Я ребёнок'), findsOneWidget);
+    expect(find.text('Я родитель'), findsOneWidget);
+  });
+
+  testWidgets('child role action is available', (tester) async {
+    DeviceRole? selected;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoleSelectionScreen(onSelected: (role) async => selected = role),
       ),
     );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Growly'), findsOneWidget);
-    expect(find.text('Маленькие шаги к школе'), findsOneWidget);
-    expect(find.text('Режим ребёнка'), findsOneWidget);
+    await tester.tap(find.text('Я ребёнок'));
+    await tester.pump();
+    expect(selected, DeviceRole.child);
   });
 }
