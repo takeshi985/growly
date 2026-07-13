@@ -3,6 +3,8 @@
 ## Current foundation
 
 - Phoenix/PostgreSQL learning backend and child-safe mobile API v1;
+- Flutter MVP with child tasks, backend feedback, parent progress, curriculum,
+  and connection settings;
 - browser child, parent, diagnostic, curriculum, and workbook demos;
 - internal Content Admin for courses, units, lessons, skills, tasks, workbooks,
   and workbook pages;
@@ -10,7 +12,7 @@
 
 ## Next stages
 
-1. Flutter mobile client using catalog, lesson map, session, and answer APIs.
+1. Validate the Flutter MVP with children and parents on Android devices.
 2. Parent authentication and secure child-profile selection.
 3. Child-safe privacy model and production data retention rules.
 4. Content-pack import with transactional validation and slug-based upserts.

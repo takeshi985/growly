@@ -1,6 +1,26 @@
 defmodule BackendWeb.MobileV1JSON do
   @moduledoc "Stable child-safe JSON shapes for the future Flutter client."
 
+  def health do
+    %{data: %{status: "ok", service: "growly", version: "mobile-v1"}}
+  end
+
+  def demo_bootstrap(demo) do
+    child_id = demo.child.id
+
+    %{
+      data: %{
+        parent: %{id: demo.parent.id, email: demo.parent.email},
+        child: %{id: child_id, name: demo.child.name, age: demo.child.age},
+        links: %{
+          session: "/api/mobile/v1/children/#{child_id}/session",
+          progress: "/api/mobile/v1/children/#{child_id}/progress",
+          lesson_map: "/api/mobile/v1/children/#{child_id}/lesson_map"
+        }
+      }
+    }
+  end
+
   def session(session), do: %{data: session_data(session)}
 
   def catalog(courses) do
