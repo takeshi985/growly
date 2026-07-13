@@ -11,6 +11,17 @@ The Android emulator uses `10.0.2.2` to reach the development machine.
 
 ## Endpoints
 
+### Health and demo bootstrap
+
+- `GET /api/mobile/v1/health`
+- `GET /api/mobile/v1/demo/bootstrap`
+
+The health endpoint reports whether the mobile API process is available. The
+demo bootstrap endpoint idempotently ensures the local MVP content exists and
+returns the stable demo parent, child, and links for that child. It is intended
+only for development and demos. Calling it never resets learning progress and
+never returns task answers.
+
 ### Curriculum catalog and lesson map
 
 - `GET /api/mobile/v1/catalog`

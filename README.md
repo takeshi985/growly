@@ -18,10 +18,13 @@ for parents.
 
 ```text
 backend/  Phoenix and PostgreSQL API
+mobile/   Flutter client for Android, iOS, web, and future desktop builds
+docs/     Product, API, workbook, privacy, and mobile setup documentation
 ```
 
-The future mobile client, content, and product documentation will live beside
-`backend/` as the product grows.
+The first Flutter MVP lives in `mobile/` and connects to the child-safe mobile
+API. See [`docs/mobile_flutter_mvp.md`](docs/mobile_flutter_mvp.md) for setup,
+run commands, safety rules, and current limitations.
 
 ## Run the backend locally
 

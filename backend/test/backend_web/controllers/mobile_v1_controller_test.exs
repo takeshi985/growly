@@ -8,6 +8,61 @@ defmodule BackendWeb.MobileV1ControllerTest do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
 
+  test "health returns the mobile API service status", %{conn: conn} do
+    assert conn
+           |> get(~p"/api/mobile/v1/health")
+           |> json_response(200) == %{
+             "data" => %{
+               "status" => "ok",
+               "service" => "growly",
+               "version" => "mobile-v1"
+             }
+           }
+  end
+
+  test "demo bootstrap creates stable data and returns child links without resetting progress", %{
+    conn: conn
+  } do
+    first =
+      conn
+      |> get(~p"/api/mobile/v1/demo/bootstrap")
+      |> json_response(200)
+      |> Map.fetch!("data")
+
+    child_id = first["child"]["id"]
+    assert first["parent"]["email"] == "demo-parent@growly.local"
+    assert first["child"]["age"] == 6
+    assert first["links"]["session"] == "/api/mobile/v1/children/#{child_id}/session"
+    assert first["links"]["progress"] == "/api/mobile/v1/children/#{child_id}/progress"
+    assert first["links"]["lesson_map"] == "/api/mobile/v1/children/#{child_id}/lesson_map"
+    refute inspect(first) =~ "correct_answer"
+
+    session =
+      conn
+      |> get(~p"/api/mobile/v1/children/#{child_id}/session")
+      |> json_response(200)
+      |> Map.fetch!("data")
+
+    task_id = session["next_task"]["id"]
+    _answer = submit_answer(conn, child_id, task_id, "not-the-correct-answer")
+
+    second =
+      conn
+      |> get(~p"/api/mobile/v1/demo/bootstrap")
+      |> json_response(200)
+      |> Map.fetch!("data")
+
+    assert second["child"]["id"] == child_id
+
+    progress =
+      conn
+      |> get(~p"/api/mobile/v1/children/#{child_id}/progress")
+      |> json_response(200)
+      |> Map.fetch!("data")
+
+    assert Enum.sum_by(progress["skills"], & &1["incorrect_attempts_count"]) == 1
+  end
+
   test "session returns child, progress, and a child-safe next task", %{conn: conn} do
     child = child_profile_fixture(%{name: "Миша", age: 6})
     skill = skill_fixture(%{title: "Считает предметы", area: "math", age_min: 5, age_max: 7})

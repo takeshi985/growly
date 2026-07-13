@@ -97,6 +97,8 @@ defmodule BackendWeb.Router do
   scope "/api/mobile/v1", BackendWeb do
     pipe_through(:api)
 
+    get("/health", MobileV1Controller, :health)
+    get("/demo/bootstrap", MobileV1Controller, :demo_bootstrap)
     get("/catalog", MobileV1Controller, :catalog)
     get("/courses/:course_id", MobileV1Controller, :course)
     get("/courses/:course_id/map", MobileV1Controller, :course_map)

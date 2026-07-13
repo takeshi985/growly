@@ -1,9 +1,26 @@
 defmodule BackendWeb.MobileV1Controller do
   use BackendWeb, :controller
 
-  alias Backend.Learning
   alias Backend.Content
+  alias Backend.Demo
+  alias Backend.Learning
   alias BackendWeb.MobileV1JSON
+
+  def health(conn, _params) do
+    json(conn, MobileV1JSON.health())
+  end
+
+  def demo_bootstrap(conn, _params) do
+    case Demo.ensure_data() do
+      {:ok, demo} ->
+        json(conn, MobileV1JSON.demo_bootstrap(demo))
+
+      {:error, _reason} ->
+        conn
+        |> put_status(:service_unavailable)
+        |> json(%{errors: %{demo: ["could not prepare demo data"]}})
+    end
+  end
 
   def catalog(conn, _params) do
     json(conn, MobileV1JSON.catalog(Content.list_published_courses_with_curriculum()))
