@@ -33,14 +33,15 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     widget.onSetupChanged();
   }
 
+  Widget _pairing() => ParentPairingScreen(
+    apiClient: widget.apiClient,
+    onPaired: _paired,
+    onChangeRole: widget.onResetRole,
+  );
   @override
   Widget build(BuildContext context) {
     final childId = widget.setup.pairedChildId;
-    if (childId == null)
-      return ParentPairingScreen(
-        apiClient: widget.apiClient,
-        onPaired: _paired,
-      );
+    if (childId == null) return _pairing();
     return Scaffold(
       appBar: AppBar(title: const Text('Growly для родителя')),
       body: SafeArea(
@@ -90,18 +91,27 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                   label: 'Настройки',
                   icon: Icons.settings_rounded,
                   secondary: true,
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => SettingsScreen(
-                        apiClient: widget.apiClient,
-                        onResetRole: widget.onResetRole,
-                      ),
-                    ),
-                  ),
+                  onPressed: () => _openSettings(childId),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _openSettings(int childId) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SettingsScreen(
+          apiClient: widget.apiClient,
+          role: DeviceRole.parent,
+          pairedChildId: childId,
+          onResetRole: widget.onResetRole,
+          onOpenParentPairing: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute<void>(builder: (_) => _pairing())),
         ),
       ),
     );

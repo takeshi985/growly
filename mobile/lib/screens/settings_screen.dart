@@ -1,13 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../api/growly_api_client.dart';
+import '../storage/device_preferences.dart';
+import '../theme/growly_theme.dart';
+import '../widgets/growly_card.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, required this.apiClient, this.onResetRole});
-
+  const SettingsScreen({
+    super.key,
+    required this.apiClient,
+    this.role,
+    this.childId,
+    this.pairedChildId,
+    this.onResetRole,
+    this.onOpenChildPairing,
+    this.onOpenParentPairing,
+  });
   final GrowlyApiClient apiClient;
+  final DeviceRole? role;
+  final int? childId;
+  final int? pairedChildId;
   final Future<void> Function()? onResetRole;
-
+  final VoidCallback? onOpenChildPairing;
+  final VoidCallback? onOpenParentPairing;
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
@@ -16,7 +31,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _checking = false;
   bool? _healthy;
   String? _message;
-
   Future<void> _check() async {
     setState(() {
       _checking = true;
@@ -33,128 +47,175 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _checking = false;
       });
     } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _healthy = false;
-        _message = error.toString();
-        _checking = false;
-      });
+      if (mounted)
+        setState(() {
+          _healthy = false;
+          _message = error.toString();
+          _checking = false;
+        });
+    }
+  }
+
+  Future<void> _changeRole() async {
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Сменить роль?'),
+        content: const Text(
+          'Данные на сервере не удалятся. Изменится только режим этого устройства.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Сменить'),
+          ),
+        ],
+      ),
+    );
+    if (approved == true) {
+      await widget.onResetRole?.call();
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Подключение')),
-    body: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
+  Widget build(BuildContext context) {
+    final isChild = widget.role == DeviceRole.child;
+    final isParent = widget.role == DeviceRole.parent;
+    final roleText = isChild
+        ? 'ребёнок'
+        : isParent
+        ? 'родитель'
+        : 'не выбран';
+    return Scaffold(
+      appBar: AppBar(title: const Text('Настройки')),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          children: [
+            GrowlyCard(
+              color: GrowlyTheme.softGreen,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Текущий API',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    'Режим устройства: $roleText',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: widget.onResetRole == null ? null : _changeRole,
+                    icon: const Icon(Icons.swap_horiz_rounded),
+                    label: const Text('Сменить роль устройства'),
+                  ),
+                ],
+              ),
+            ),
+            if (isChild) ...[
+              const SizedBox(height: 12),
+              GrowlyCard(
+                color: GrowlyTheme.softYellow,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Родительский телефон',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Подключите его сейчас или создайте новый код позже.',
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: widget.onOpenChildPairing,
+                      icon: const Icon(Icons.qr_code_rounded),
+                      label: const Text('Подключить родителя'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (isParent) ...[
+              const SizedBox(height: 12),
+              GrowlyCard(
+                color: GrowlyTheme.softPurple,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.pairedChildId == null
+                          ? 'Ребёнок ещё не подключён'
+                          : 'Подключён профиль ребёнка №${widget.pairedChildId}',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: widget.onOpenParentPairing,
+                      icon: const Icon(Icons.link_rounded),
+                      label: Text(
+                        widget.pairedChildId == null
+                            ? 'Ввести код ребёнка'
+                            : 'Переподключиться к другому ребёнку',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            GrowlyCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Подключение к backend',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   SelectableText(
                     widget.apiClient.baseUrl,
                     style: const TextStyle(fontFamily: 'monospace'),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   FilledButton.icon(
                     onPressed: _checking ? null : _check,
                     icon: const Icon(Icons.health_and_safety_rounded),
                     label: Text(_checking ? 'Проверяем…' : 'Проверить backend'),
                   ),
-                  if (_message != null) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          _healthy == true
-                              ? Icons.check_circle
-                              : Icons.info_rounded,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(_message!)),
-                      ],
+                  if (_message != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _healthy == true
+                                ? Icons.check_circle
+                                : Icons.info_rounded,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(_message!)),
+                        ],
+                      ),
                     ),
-                  ],
                 ],
               ),
             ),
-          ),
-          if (widget.onResetRole != null) ...[
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () async {
-                await widget.onResetRole!();
-                if (context.mounted)
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-              icon: const Icon(Icons.restart_alt_rounded),
-              label: const Text('Сбросить роль устройства'),
-            ),
           ],
-          const SizedBox(height: 18),
-          const _HelpCard(
-            title: 'Android Emulator',
-            address: 'http://10.0.2.2:4000',
-            note: '10.0.2.2 ведёт с эмулятора на компьютер разработчика.',
-          ),
-          const SizedBox(height: 12),
-          const _HelpCard(
-            title: 'Windows desktop',
-            address: 'http://localhost:4000',
-            note: 'Требуется Visual Studio с Desktop development with C++.',
-          ),
-          const SizedBox(height: 12),
-          const _HelpCard(
-            title: 'Настоящий Android-телефон',
-            address: 'http://YOUR_PC_LAN_IP:4000',
-            note:
-                'Телефон и компьютер должны находиться в одной локальной сети.',
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'HTTP разрешён только в debug-сборке. Производственная версия должна использовать HTTPS.',
-          ),
-        ],
+        ),
       ),
-    ),
-  );
-}
-
-class _HelpCard extends StatelessWidget {
-  const _HelpCard({
-    required this.title,
-    required this.address,
-    required this.note,
-  });
-
-  final String title;
-  final String address;
-  final String note;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          SelectableText(address),
-          const SizedBox(height: 6),
-          Text(note),
-        ],
-      ),
-    ),
-  );
+    );
+  }
 }
