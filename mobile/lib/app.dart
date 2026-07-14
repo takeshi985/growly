@@ -7,6 +7,7 @@ import 'screens/parent_home_screen.dart';
 import 'screens/role_selection_screen.dart';
 import 'storage/device_preferences.dart';
 import 'theme/growly_theme.dart';
+import 'widgets/growly_mascot.dart';
 
 class GrowlyApp extends StatefulWidget {
   const GrowlyApp({super.key, this.apiClient, this.preferences});
@@ -147,7 +148,7 @@ class _ParentConfirmation extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('👨‍👩‍👧', style: TextStyle(fontSize: 60)),
+                const GrowlyMascot(size: 104, mood: GrowlyMood.ready),
                 const SizedBox(height: 16),
                 Text(
                   'Это устройство будет использовать родитель?',

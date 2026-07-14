@@ -5,6 +5,7 @@ import '../api/growly_api_client.dart';
 import '../models/pairing.dart';
 import '../theme/growly_theme.dart';
 import '../widgets/growly_card.dart';
+import '../widgets/growly_mascot.dart';
 
 class ParentPairingScreen extends StatefulWidget {
   const ParentPairingScreen({
@@ -43,11 +44,12 @@ class _ParentPairingScreenState extends State<ParentPairingScreen> {
     try {
       await widget.onPaired(await widget.apiClient.claimPairingByCode(code));
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error =
               'Код не найден или истёк. Проверьте цифры и попробуйте снова.',
         );
+      }
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -66,7 +68,7 @@ class _ParentPairingScreenState extends State<ParentPairingScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('🔗', style: TextStyle(fontSize: 56)),
+                  const GrowlyMascot(size: 92, mood: GrowlyMood.ready),
                   const SizedBox(height: 12),
                   Text(
                     'Подключение к ребёнку',

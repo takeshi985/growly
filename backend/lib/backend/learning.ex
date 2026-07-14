@@ -446,11 +446,71 @@ defmodule Backend.Learning do
          %{
            child: %{id: child_profile.id, name: child_profile.name, age: child_profile.age},
            summary: build_progress_summary(skills_progress),
+           gamification: build_gamification(child_profile.id),
            skills: skills_progress,
            recommendations: build_recommendations(skills_progress)
          }}
     end
   end
+
+  defp build_gamification(child_profile_id) do
+    correct_attempts =
+      from(attempt in TaskAttempt,
+        where:
+          attempt.child_profile_id == ^child_profile_id and
+            attempt.is_correct == true,
+        order_by: [asc: attempt.id],
+        select: {attempt.task_id, attempt.inserted_at}
+      )
+      |> Repo.all()
+      |> Enum.uniq_by(fn {task_id, _inserted_at} -> task_id end)
+
+    activity_dates =
+      correct_attempts
+      |> Enum.map(fn {_task_id, inserted_at} -> attempt_date(inserted_at) end)
+      |> MapSet.new()
+
+    today = Date.utc_today()
+    yesterday = Date.add(today, -1)
+
+    streak_start =
+      cond do
+        MapSet.member?(activity_dates, today) -> today
+        MapSet.member?(activity_dates, yesterday) -> yesterday
+        true -> nil
+      end
+
+    completed_tasks = length(correct_attempts)
+    xp = completed_tasks * 10
+    level = div(xp, 100) + 1
+
+    %{
+      xp: xp,
+      level: level,
+      level_progress_percentage: rem(xp, 100),
+      xp_to_next_level: level * 100 - xp,
+      streak_days: consecutive_days(activity_dates, streak_start),
+      daily_completed:
+        Enum.count(correct_attempts, fn {_task_id, inserted_at} ->
+          attempt_date(inserted_at) == today
+        end),
+      daily_target: 3,
+      stars: completed_tasks
+    }
+  end
+
+  defp consecutive_days(_dates, nil), do: 0
+
+  defp consecutive_days(dates, date) do
+    if MapSet.member?(dates, date) do
+      1 + consecutive_days(dates, Date.add(date, -1))
+    else
+      0
+    end
+  end
+
+  defp attempt_date(%DateTime{} = inserted_at), do: DateTime.to_date(inserted_at)
+  defp attempt_date(%NaiveDateTime{} = inserted_at), do: NaiveDateTime.to_date(inserted_at)
 
   # ---------------------------------------------------------------------------
   # Initial diagnostic

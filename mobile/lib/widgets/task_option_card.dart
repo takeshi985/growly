@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/growly_tokens.dart';
+
 class TaskOptionCard extends StatelessWidget {
   const TaskOptionCard({
     super.key,
@@ -18,14 +20,20 @@ class TaskOptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     return Card(
-      color: selected ? colors.primaryContainer : colors.surface,
+      color: selected ? GrowlyColors.brandSoft : GrowlyColors.surface,
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(GrowlyRadii.lg),
+        side: BorderSide(
+          color: selected ? GrowlyColors.brand : GrowlyColors.outline,
+          width: selected ? 2.5 : 1,
+        ),
+      ),
       child: InkWell(
         onTap: enabled ? onTap : null,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
           child: Row(
             children: [
               Container(
@@ -33,15 +41,13 @@ class TaskOptionCard extends StatelessWidget {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: selected ? colors.primary : colors.secondaryContainer,
-                  shape: BoxShape.circle,
+                  color: selected ? GrowlyColors.brand : GrowlyColors.canvas,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   value.characters.firstOrNull?.toUpperCase() ?? '•',
                   style: TextStyle(
-                    color: selected
-                        ? colors.onPrimary
-                        : colors.onSecondaryContainer,
+                    color: selected ? Colors.white : GrowlyColors.ink,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -56,7 +62,11 @@ class TaskOptionCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (selected) const Icon(Icons.check_circle_rounded),
+              if (selected)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: GrowlyColors.brand,
+                ),
             ],
           ),
         ),

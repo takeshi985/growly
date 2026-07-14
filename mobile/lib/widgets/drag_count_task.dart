@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Emoji are intentional placeholders until Growly has its illustration pack.
+import '../theme/growly_tokens.dart';
+
 class DragCountTask extends StatefulWidget {
   const DragCountTask({
     super.key,
@@ -30,10 +31,11 @@ class _DragCountTaskState extends State<DragCountTask> {
   void _drop(String basket) {
     if (!widget.enabled || _left + _right >= _total) return;
     setState(() {
-      if (basket == 'left')
+      if (basket == 'left') {
         _left++;
-      else
+      } else {
         _right++;
+      }
       _notify();
     });
   }
@@ -56,13 +58,25 @@ class _DragCountTaskState extends State<DragCountTask> {
             remaining,
             (index) => Draggable<String>(
               data: 'apple-$index',
-              feedback: const Text('🍎', style: TextStyle(fontSize: 45)),
-              childWhenDragging: const Text(
-                '○',
-                style: TextStyle(fontSize: 36),
+              feedback: const Material(
+                color: Colors.transparent,
+                child: Icon(
+                  Icons.apple_rounded,
+                  size: 48,
+                  color: Color(0xFFC9505A),
+                ),
+              ),
+              childWhenDragging: const Icon(
+                Icons.circle_outlined,
+                size: 38,
+                color: Color(0xFFB8C3BF),
               ),
               maxSimultaneousDrags: widget.enabled ? 1 : 0,
-              child: const Text('🍎', style: TextStyle(fontSize: 42)),
+              child: const Icon(
+                Icons.apple_rounded,
+                size: 44,
+                color: Color(0xFFC9505A),
+              ),
             ),
           ),
         ),
@@ -123,21 +137,25 @@ class _BasketState extends State<_Basket> {
       setState(() => _hovering = false);
       widget.onAccept(details.data);
     },
-    builder: (context, _, __) => AnimatedContainer(
+    builder: (context, _, _) => AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       height: 128,
       decoration: BoxDecoration(
-        color: _hovering ? const Color(0xFFFFE6A6) : const Color(0xFFF3D39C),
+        color: _hovering ? GrowlyColors.rewardSoft : GrowlyColors.accentSoft,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: _hovering ? const Color(0xFFE59D2D) : Colors.transparent,
+          color: _hovering ? GrowlyColors.accent : Colors.transparent,
           width: 3,
         ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('🧺', style: TextStyle(fontSize: 46)),
+          const Icon(
+            Icons.shopping_basket_rounded,
+            size: 48,
+            color: Color(0xFF8B5A2B),
+          ),
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: widget.count.toDouble()),
             duration: const Duration(milliseconds: 220),

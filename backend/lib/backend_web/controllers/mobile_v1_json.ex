@@ -91,7 +91,8 @@ defmodule BackendWeb.MobileV1JSON do
         task_attempt: attempt_data(answer_result.task_attempt),
         feedback: feedback_data(answer_result.feedback),
         next_task: task_data(answer_result.session.next_task),
-        progress_summary: answer_result.session.progress.summary
+        progress_summary: answer_result.session.progress.summary,
+        gamification: answer_result.session.progress.gamification
       }
     }
   end
@@ -126,6 +127,7 @@ defmodule BackendWeb.MobileV1JSON do
       child: %{id: session.child.id, name: session.child.name, age: session.child.age},
       next_task: task_data(session.next_task),
       progress_summary: session.progress.summary,
+      gamification: session.progress.gamification,
       recommendations_count: length(session.progress.recommendations),
       session_state: session.session_state
     }

@@ -47,12 +47,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _checking = false;
       });
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _healthy = false;
           _message = error.toString();
           _checking = false;
         });
+      }
     }
   }
 

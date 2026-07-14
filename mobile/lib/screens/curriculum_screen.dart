@@ -6,6 +6,7 @@ import '../models/curriculum.dart';
 import '../widgets/error_state.dart';
 import '../widgets/level_map.dart';
 import '../widgets/loading_state.dart';
+import '../theme/growly_tokens.dart';
 import 'child_task_screen.dart';
 
 class CurriculumScreen extends StatefulWidget {
@@ -51,16 +52,18 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
       child: FutureBuilder<_CurriculumData>(
         future: _curriculum,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done)
+          if (snapshot.connectionState != ConnectionState.done) {
             return const LoadingState(message: 'Строим маршрут…');
-          if (snapshot.hasError || !snapshot.hasData)
+          }
+          if (snapshot.hasError || !snapshot.hasData) {
             return ErrorState(message: '${snapshot.error}', onRetry: _load);
+          }
           final data = snapshot.data!;
           return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 48),
             children: [
               Card(
-                color: Theme.of(context).colorScheme.primaryContainer,
+                color: GrowlyColors.brandSoft,
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -76,13 +79,24 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
               for (final unit in data.map.units) ...[
-                Text(
-                  unit.title,
-                  style: Theme.of(context).textTheme.headlineSmall,
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.landscape_rounded,
+                      color: GrowlyColors.brand,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        unit.title,
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 LevelMap(
                   lessons: unit.lessons,
                   readOnly: !widget.childMode,
@@ -97,7 +111,7 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                         )
                       : null,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 28),
               ],
             ],
           );

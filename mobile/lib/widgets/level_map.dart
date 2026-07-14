@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/curriculum.dart';
+import '../theme/growly_tokens.dart';
 
 class LevelMap extends StatelessWidget {
   const LevelMap({
@@ -9,25 +10,26 @@ class LevelMap extends StatelessWidget {
     this.onLessonTap,
     this.readOnly = false,
   });
+
   final List<Lesson> lessons;
   final ValueChanged<Lesson>? onLessonTap;
   final bool readOnly;
+
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 260,
-    child: SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SizedBox(
-        width: (lessons.length * 150 + 80).toDouble(),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: CustomPaint(painter: _DottedPathPainter(lessons.length)),
-            ),
-            for (var index = 0; index < lessons.length; index++)
-              Positioned(
-                left: 45 + index * 150,
-                top: index.isEven ? 58 : 132,
+  Widget build(BuildContext context) => Stack(
+    children: [
+      Positioned.fill(
+        child: CustomPaint(painter: _PathPainter(count: lessons.length)),
+      ),
+      Column(
+        children: [
+          for (var index = 0; index < lessons.length; index++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Align(
+                alignment: index.isEven
+                    ? const Alignment(-0.55, 0)
+                    : const Alignment(0.55, 0),
                 child: _LevelNode(
                   lesson: lessons[index],
                   readOnly: readOnly,
@@ -36,10 +38,10 @@ class LevelMap extends StatelessWidget {
                       : () => onLessonTap!(lessons[index]),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
-    ),
+    ],
   );
 }
 
@@ -48,6 +50,7 @@ class _LevelNode extends StatefulWidget {
   final Lesson lesson;
   final bool readOnly;
   final VoidCallback? onTap;
+
   @override
   State<_LevelNode> createState() => _LevelNodeState();
 }
@@ -57,7 +60,22 @@ class _LevelNodeState extends State<_LevelNode>
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active =
+        widget.lesson.status == 'available' ||
+        widget.lesson.status == 'in_progress';
+    if (active && !GrowlyMotion.reduce(context)) {
+      _controller.repeat(reverse: true);
+    } else {
+      _controller.stop();
+      _controller.value = 0;
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -67,66 +85,159 @@ class _LevelNodeState extends State<_LevelNode>
   @override
   Widget build(BuildContext context) {
     final status = widget.lesson.status;
-    final (icon, color) = switch (status) {
-      'completed' => (Icons.star_rounded, const Color(0xFF5C9E6A)),
-      'needs_review' => (Icons.replay_rounded, const Color(0xFFE6A13B)),
-      'locked' => (Icons.lock_rounded, const Color(0xFF98A0A0)),
-      _ => (Icons.flag_rounded, const Color(0xFF5C7CD9)),
-    };
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) => Transform.scale(
-            scale: status == 'available' ? 1 + _controller.value * .06 : 1,
-            child: child,
+    final state = _styleFor(status);
+    final enabled =
+        !widget.readOnly && status != 'locked' && widget.onTap != null;
+    final content = SizedBox(
+      width: 178,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) => Transform.scale(
+              scale: 1 + _controller.value * .045,
+              child: child,
+            ),
+            child: Container(
+              width: 76,
+              height: 70,
+              decoration: BoxDecoration(
+                color: state.color,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: state.border, width: 3),
+                boxShadow: status == 'locked'
+                    ? const []
+                    : [
+                        BoxShadow(
+                          color: state.border,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+              ),
+              child: Icon(state.icon, color: state.iconColor, size: 34),
+            ),
           ),
-          child: CircleAvatar(
-            radius: 31,
-            backgroundColor: color,
-            child: Icon(icon, color: Colors.white, size: 30),
-          ),
-        ),
-        const SizedBox(height: 7),
-        SizedBox(
-          width: 125,
-          child: Text(
+          const SizedBox(height: 10),
+          Text(
             widget.lesson.title,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
           ),
-        ),
-      ],
+          const SizedBox(height: 3),
+          Text(
+            state.label,
+            style: TextStyle(
+              color: state.border,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
     );
-    return widget.readOnly || status == 'locked'
-        ? content
-        : InkWell(
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(40),
-            child: content,
-          );
+
+    return Semantics(
+      button: enabled,
+      enabled: enabled,
+      label: '${widget.lesson.title}, ${state.label}',
+      child: enabled
+          ? InkWell(
+              onTap: widget.onTap,
+              borderRadius: BorderRadius.circular(GrowlyRadii.xl),
+              child: Padding(padding: const EdgeInsets.all(8), child: content),
+            )
+          : content,
+    );
   }
 }
 
-class _DottedPathPainter extends CustomPainter {
-  _DottedPathPainter(this.count);
+_NodeStyle _styleFor(String status) => switch (status) {
+  'completed' => const _NodeStyle(
+    Icons.check_rounded,
+    'Пройдено',
+    GrowlyColors.success,
+    GrowlyColors.success,
+    Colors.white,
+  ),
+  'perfect' => const _NodeStyle(
+    Icons.star_rounded,
+    'Идеально',
+    GrowlyColors.reward,
+    GrowlyColors.accent,
+    GrowlyColors.ink,
+  ),
+  'in_progress' => const _NodeStyle(
+    Icons.play_arrow_rounded,
+    'Текущий шаг',
+    GrowlyColors.brand,
+    GrowlyColors.brandPressed,
+    Colors.white,
+  ),
+  'needs_review' => const _NodeStyle(
+    Icons.lightbulb_rounded,
+    'Повторим вместе',
+    GrowlyColors.helpSoft,
+    GrowlyColors.help,
+    GrowlyColors.help,
+  ),
+  'locked' => const _NodeStyle(
+    Icons.lock_rounded,
+    'Пока закрыто',
+    GrowlyColors.outline,
+    GrowlyColors.disabled,
+    GrowlyColors.inkMuted,
+  ),
+  _ => const _NodeStyle(
+    Icons.flag_rounded,
+    'Можно начать',
+    GrowlyColors.brandSoft,
+    GrowlyColors.brand,
+    GrowlyColors.brand,
+  ),
+};
+
+class _NodeStyle {
+  const _NodeStyle(
+    this.icon,
+    this.label,
+    this.color,
+    this.border,
+    this.iconColor,
+  );
+  final IconData icon;
+  final String label;
+  final Color color;
+  final Color border;
+  final Color iconColor;
+}
+
+class _PathPainter extends CustomPainter {
+  const _PathPainter({required this.count});
   final int count;
+
   @override
   void paint(Canvas canvas, Size size) {
+    if (count < 2) return;
     final paint = Paint()
-      ..color = const Color(0xFFB8D8A8)
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
-    for (var x = 100.0; x < count * 150; x += 12) {
-      final y = ((x ~/ 150).isEven) ? 93.0 : 167.0;
-      canvas.drawCircle(Offset(x, y), 2, paint..style = PaintingStyle.fill);
+      ..color = GrowlyColors.outline
+      ..strokeWidth = 5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final path = Path();
+    final step = size.height / count;
+    path.moveTo(size.width * .35, step * .55);
+    for (var index = 1; index < count; index++) {
+      final x = index.isEven ? size.width * .35 : size.width * .65;
+      final y = step * (index + .55);
+      path.quadraticBezierTo(size.width * .5, y - step * .5, x, y);
     }
+    canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant _DottedPathPainter oldDelegate) =>
+  bool shouldRepaint(covariant _PathPainter oldDelegate) =>
       oldDelegate.count != count;
 }

@@ -34,6 +34,27 @@ void main() {
     expect(session.nextTask, isNull);
     expect(session.hasNextTask, isFalse);
     expect(session.message, 'Можно отдохнуть.');
+    expect(session.gamification.level, greaterThanOrEqualTo(1));
+  });
+
+  test('ChildSession parses backend gamification metrics', () {
+    final session = ChildSession.fromJson({
+      'child': {'id': 1, 'name': 'Миша', 'age': 6},
+      'progress_summary': <String, dynamic>{},
+      'gamification': {
+        'xp': 40,
+        'level': 2,
+        'level_progress_percentage': 35,
+        'streak_days': 3,
+        'daily_completed': 2,
+        'daily_target': 3,
+      },
+    });
+
+    expect(session.gamification.xp, 40);
+    expect(session.gamification.level, 2);
+    expect(session.gamification.levelProgress, .35);
+    expect(session.gamification.streakDays, 3);
   });
 
   test('GrowlyTask parses without correctAnswer', () {

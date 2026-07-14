@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/progress.dart';
+import '../theme/growly_tokens.dart';
+import 'growly_progress_bar.dart';
 
 class ProgressSummaryCard extends StatelessWidget {
   const ProgressSummaryCard({super.key, required this.summary});
@@ -31,25 +33,55 @@ class ProgressSummaryCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          LinearProgressIndicator(
+          GrowlyProgressBar(
             value: summary.completionPercentage.clamp(0, 100) / 100,
-            minHeight: 10,
-            borderRadius: BorderRadius.circular(99),
+            color: GrowlyColors.brand,
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
+          Row(
             children: [
-              Text(
-                'Выполнено: ${summary.completedTasks}/${summary.totalTasks}',
+              Expanded(
+                child: _SummaryValue(
+                  value: '${summary.completedTasks}/${summary.totalTasks}',
+                  label: 'заданий',
+                ),
               ),
-              Text('Освоено навыков: ${summary.masteredSkills}'),
-              Text('Повторить: ${summary.skillsNeedingReview}'),
+              Expanded(
+                child: _SummaryValue(
+                  value: '${summary.masteredSkills}',
+                  label: 'освоено',
+                ),
+              ),
+              Expanded(
+                child: _SummaryValue(
+                  value: '${summary.skillsNeedingReview}',
+                  label: 'повторить',
+                ),
+              ),
             ],
           ),
         ],
       ),
     ),
+  );
+}
+
+class _SummaryValue extends StatelessWidget {
+  const _SummaryValue({required this.value, required this.label});
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Text(
+        value,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+      ),
+      Text(
+        label,
+        style: const TextStyle(fontSize: 12, color: GrowlyColors.inkMuted),
+      ),
+    ],
   );
 }

@@ -5,6 +5,8 @@ import '../api/growly_api_client.dart';
 import '../models/pairing.dart';
 import '../widgets/error_state.dart';
 import '../widgets/loading_state.dart';
+import '../theme/growly_tokens.dart';
+import '../widgets/growly_mascot.dart';
 
 class ChildPairingScreen extends StatefulWidget {
   const ChildPairingScreen({
@@ -36,10 +38,12 @@ class _ChildPairingScreenState extends State<ChildPairingScreen> {
       child: FutureBuilder<PairingOffer>(
         future: _offer,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done)
+          if (snapshot.connectionState != ConnectionState.done) {
             return const LoadingState(message: 'Готовим код…');
-          if (snapshot.hasError || !snapshot.hasData)
+          }
+          if (snapshot.hasError || !snapshot.hasData) {
             return ErrorState(message: '${snapshot.error}', onRetry: _refresh);
+          }
           final pairing = snapshot.data!.pairing;
           return Center(
             child: SingleChildScrollView(
@@ -48,6 +52,8 @@ class _ChildPairingScreenState extends State<ChildPairingScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const GrowlyMascot(size: 84, mood: GrowlyMood.ready),
+                    const SizedBox(height: 12),
                     Text(
                       'Покажи этот код родителю',
                       style: Theme.of(context).textTheme.headlineSmall
@@ -61,7 +67,7 @@ class _ChildPairingScreenState extends State<ChildPairingScreen> {
                     ),
                     const SizedBox(height: 24),
                     Card(
-                      color: const Color(0xFFFFFFFF),
+                      color: GrowlyColors.surface,
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: QrImageView(
@@ -69,11 +75,11 @@ class _ChildPairingScreenState extends State<ChildPairingScreen> {
                           size: 190,
                           eyeStyle: const QrEyeStyle(
                             eyeShape: QrEyeShape.square,
-                            color: Color(0xFF31583A),
+                            color: GrowlyColors.brandPressed,
                           ),
                           dataModuleStyle: const QrDataModuleStyle(
                             dataModuleShape: QrDataModuleShape.square,
-                            color: Color(0xFF31583A),
+                            color: GrowlyColors.brandPressed,
                           ),
                         ),
                       ),
