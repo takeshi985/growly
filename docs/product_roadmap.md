@@ -18,3 +18,10 @@
 4. Content-pack import with transactional validation and slug-based upserts.
 5. Subscription and payments in parent mode only.
 6. Print-ready workbook production and mobile QR deep links.
+# Следующий визуальный и account-спринт
+
+- подготовить оригинальный набор из 10–20 иллюстраций к заданиям;
+- добавить QR-сканер после отдельной проверки разрешения камеры;
+- добавить production-авторизацию родителя и отзыв доступа устройства;
+- добавить создание нескольких профилей детей;
+- развить достижения и ежедневные задания из UI-прототипа.

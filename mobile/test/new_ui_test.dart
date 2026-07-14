@@ -8,6 +8,8 @@ import 'package:mobile/api/growly_api_client.dart';
 import 'package:mobile/models/curriculum.dart';
 import 'package:mobile/screens/child_pairing_screen.dart';
 import 'package:mobile/screens/parent_pairing_screen.dart';
+import 'package:mobile/screens/settings_screen.dart';
+import 'package:mobile/storage/device_preferences.dart';
 import 'package:mobile/widgets/drag_count_task.dart';
 import 'package:mobile/widgets/level_map.dart';
 
@@ -25,9 +27,40 @@ void main() {
         home: ParentPairingScreen(apiClient: apiClient, onPaired: (_) async {}),
       ),
     );
-    expect(find.text('Подключение к ребёнку'), findsOneWidget);
+    expect(find.text('Подключение к ребёнку'), findsWidgets);
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Подключиться'), findsOneWidget);
+    expect(find.text('Выбрать другую роль'), findsNothing);
+  });
+
+  testWidgets('unpaired parent can choose another role', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ParentPairingScreen(
+          apiClient: apiClient,
+          onPaired: (_) async {},
+          onChangeRole: () async {},
+        ),
+      ),
+    );
+    expect(find.text('Выбрать другую роль'), findsOneWidget);
+  });
+
+  testWidgets('settings show child parent connection and role action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SettingsScreen(
+          apiClient: apiClient,
+          role: DeviceRole.child,
+          onResetRole: () async {},
+          onOpenChildPairing: () {},
+        ),
+      ),
+    );
+    expect(find.text('Сменить роль устройства'), findsOneWidget);
+    expect(find.text('Подключить родителя'), findsOneWidget);
   });
 
   testWidgets('child pairing renders the eight-digit code area', (

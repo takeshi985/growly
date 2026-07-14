@@ -1,31 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../storage/device_preferences.dart';
+import '../theme/growly_theme.dart';
 
-class RoleSelectionScreen extends StatefulWidget {
+class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key, required this.onSelected});
 
-  final Future<void> Function(DeviceRole role) onSelected;
-
-  @override
-  State<RoleSelectionScreen> createState() => _RoleSelectionScreenState();
-}
-
-class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
-  bool _saving = false;
-
-  Future<void> _select(DeviceRole role) async {
-    setState(() => _saving = true);
-    await widget.onSelected(role);
-    if (mounted) setState(() => _saving = false);
-  }
+  final ValueChanged<DeviceRole> onSelected;
 
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 540),
+          constraints: const BoxConstraints(maxWidth: 560),
           child: Padding(
             padding: const EdgeInsets.all(28),
             child: Column(
@@ -36,9 +24,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   'Growly',
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.w900,
+                    color: GrowlyTheme.darkGreen,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Text(
                   'Выберите, как будет использоваться это устройство',
                   textAlign: TextAlign.center,
@@ -47,20 +36,18 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 const SizedBox(height: 28),
                 _RoleCard(
                   icon: '🧒',
-                  title: 'Я ребёнок',
-                  subtitle: 'Здесь будут задания, уровни и подсказки.',
-                  color: const Color(0xFFDDF2D8),
-                  enabled: !_saving,
-                  onTap: () => _select(DeviceRole.child),
+                  title: 'Ребёнок',
+                  subtitle: 'Задания, уровни, подсказки и карта обучения',
+                  color: GrowlyTheme.softGreen,
+                  onTap: () => onSelected(DeviceRole.child),
                 ),
                 const SizedBox(height: 14),
                 _RoleCard(
                   icon: '👨‍👩‍👧',
-                  title: 'Я родитель',
-                  subtitle: 'Здесь будет прогресс ребёнка и рекомендации.',
-                  color: const Color(0xFFFFEBC4),
-                  enabled: !_saving,
-                  onTap: () => _select(DeviceRole.parent),
+                  title: 'Родитель',
+                  subtitle: 'Прогресс ребёнка, рекомендации и отчёты',
+                  color: GrowlyTheme.softYellow,
+                  onTap: () => onSelected(DeviceRole.parent),
                 ),
               ],
             ),
@@ -77,14 +64,12 @@ class _RoleCard extends StatefulWidget {
     required this.title,
     required this.subtitle,
     required this.color,
-    required this.enabled,
     required this.onTap,
   });
   final String icon;
   final String title;
   final String subtitle;
   final Color color;
-  final bool enabled;
   final VoidCallback onTap;
   @override
   State<_RoleCard> createState() => _RoleCardState();
@@ -94,14 +79,12 @@ class _RoleCardState extends State<_RoleCard> {
   bool _pressed = false;
   @override
   Widget build(BuildContext context) => GestureDetector(
-    onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
+    onTapDown: (_) => setState(() => _pressed = true),
     onTapCancel: () => setState(() => _pressed = false),
-    onTapUp: widget.enabled
-        ? (_) {
-            setState(() => _pressed = false);
-            widget.onTap();
-          }
-        : null,
+    onTapUp: (_) {
+      setState(() => _pressed = false);
+      widget.onTap();
+    },
     child: AnimatedScale(
       duration: const Duration(milliseconds: 140),
       scale: _pressed ? .98 : 1,
