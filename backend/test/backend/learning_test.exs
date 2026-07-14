@@ -353,6 +353,15 @@ defmodule Backend.LearningTest do
                  hint_used: false
                })
 
+      # Replaying an already completed task must not mint additional XP.
+      assert {:ok, %TaskAttempt{is_correct: true}} =
+               Learning.create_task_attempt(%{
+                 child_profile_id: child_profile.id,
+                 task_id: completed_task.id,
+                 selected_answer: "right",
+                 hint_used: false
+               })
+
       for _ <- 1..3 do
         assert {:ok, %TaskAttempt{is_correct: false}} =
                  Learning.create_task_attempt(%{
@@ -374,6 +383,17 @@ defmodule Backend.LearningTest do
                total_tasks: 3,
                completed_tasks: 1,
                completion_percentage: 33
+             }
+
+      assert progress.gamification == %{
+               xp: 10,
+               level: 1,
+               level_progress_percentage: 10,
+               xp_to_next_level: 90,
+               streak_days: 1,
+               daily_completed: 1,
+               daily_target: 3,
+               stars: 1
              }
 
       assert %{

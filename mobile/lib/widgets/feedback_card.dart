@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/growly_feedback.dart';
+import '../theme/growly_tokens.dart';
 
 class FeedbackCard extends StatelessWidget {
   const FeedbackCard({super.key, required this.feedback});
@@ -10,9 +11,8 @@ class FeedbackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final success = feedback.result == 'correct';
-    final colors = Theme.of(context).colorScheme;
     return Card(
-      color: success ? const Color(0xFFE4F7EA) : colors.secondaryContainer,
+      color: success ? GrowlyColors.successSoft : GrowlyColors.helpSoft,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -22,6 +22,7 @@ class FeedbackCard extends StatelessWidget {
               children: [
                 Icon(
                   success ? Icons.celebration_rounded : Icons.lightbulb_rounded,
+                  color: success ? GrowlyColors.success : GrowlyColors.help,
                 ),
                 const SizedBox(width: 10),
                 Expanded(

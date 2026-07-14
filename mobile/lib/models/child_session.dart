@@ -1,5 +1,6 @@
 import 'child_profile.dart';
 import 'growly_feedback.dart';
+import 'gamification.dart';
 import 'progress.dart';
 import 'task.dart';
 import 'task_attempt.dart';
@@ -8,6 +9,7 @@ class ChildSession {
   const ChildSession({
     required this.child,
     required this.progressSummary,
+    required this.gamification,
     required this.recommendationsCount,
     required this.hasNextTask,
     required this.message,
@@ -17,6 +19,7 @@ class ChildSession {
   final ChildProfile child;
   final GrowlyTask? nextTask;
   final ProgressSummary progressSummary;
+  final GamificationSnapshot gamification;
   final int recommendationsCount;
   final bool hasNextTask;
   final String message;
@@ -30,6 +33,11 @@ class ChildSession {
           ? GrowlyTask.fromJson(rawTask)
           : null,
       progressSummary: ProgressSummary.fromJson(_map(json['progress_summary'])),
+      gamification: json['gamification'] is Map<String, dynamic>
+          ? GamificationSnapshot.fromJson(_map(json['gamification']))
+          : GamificationSnapshot.fromProgress(
+              ProgressSummary.fromJson(_map(json['progress_summary'])),
+            ),
       recommendationsCount:
           (json['recommendations_count'] as num?)?.toInt() ?? 0,
       hasNextTask: state['has_next_task'] as bool? ?? rawTask != null,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/growly_tokens.dart';
 
 class ErrorState extends StatelessWidget {
   const ErrorState({
@@ -22,11 +23,7 @@ class ErrorState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.cloud_off_rounded,
-                size: 46,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              Icon(Icons.cloud_off_rounded, size: 46, color: GrowlyColors.help),
               const SizedBox(height: 14),
               Text(title, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),

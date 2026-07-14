@@ -4,6 +4,9 @@ import '../api/growly_api_client.dart';
 import '../models/pairing.dart';
 import '../storage/device_preferences.dart';
 import '../widgets/growly_button.dart';
+import '../widgets/growly_card.dart';
+import '../widgets/growly_mascot.dart';
+import '../theme/growly_tokens.dart';
 import 'curriculum_screen.dart';
 import 'parent_pairing_screen.dart';
 import 'parent_progress_screen.dart';
@@ -51,15 +54,47 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             child: ListView(
               padding: const EdgeInsets.all(26),
               children: [
-                Text(
-                  'Родительский режим',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
+                const Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Родительский режим',
+                            style: TextStyle(
+                              fontSize: 27,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text('Спокойный обзор обучения ребёнка.'),
+                        ],
+                      ),
+                    ),
+                    GrowlyMascot(size: 78, mood: GrowlyMood.ready),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                const GrowlyCard(
+                  color: GrowlyColors.brandSoft,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.shield_rounded,
+                        color: GrowlyColors.brand,
+                        size: 34,
+                      ),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          'Задания, покупки и внешние действия недоступны в детском режиме.',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text('Здесь только прогресс и рекомендации ребёнка.'),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
                 GrowlyButton(
                   label: 'Прогресс ребёнка',
                   icon: Icons.insights_rounded,

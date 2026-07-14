@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../storage/device_preferences.dart';
 import '../theme/growly_theme.dart';
+import '../theme/growly_tokens.dart';
+import '../widgets/growly_mascot.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key, required this.onSelected});
@@ -19,7 +21,7 @@ class RoleSelectionScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('🌱', style: TextStyle(fontSize: 64)),
+                const GrowlyMascot(size: 112, mood: GrowlyMood.happy),
                 Text(
                   'Growly',
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
@@ -35,7 +37,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
                 _RoleCard(
-                  icon: '🧒',
+                  icon: Icons.school_rounded,
                   title: 'Ребёнок',
                   subtitle: 'Задания, уровни, подсказки и карта обучения',
                   color: GrowlyTheme.softGreen,
@@ -43,7 +45,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 _RoleCard(
-                  icon: '👨‍👩‍👧',
+                  icon: Icons.family_restroom_rounded,
                   title: 'Родитель',
                   subtitle: 'Прогресс ребёнка, рекомендации и отчёты',
                   color: GrowlyTheme.softYellow,
@@ -66,7 +68,7 @@ class _RoleCard extends StatefulWidget {
     required this.color,
     required this.onTap,
   });
-  final String icon;
+  final IconData icon;
   final String title;
   final String subtitle;
   final Color color;
@@ -94,7 +96,15 @@ class _RoleCardState extends State<_RoleCard> {
           padding: const EdgeInsets.all(22),
           child: Row(
             children: [
-              Text(widget.icon, style: const TextStyle(fontSize: 42)),
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: GrowlyColors.surface,
+                  borderRadius: BorderRadius.circular(GrowlyRadii.md),
+                ),
+                child: Icon(widget.icon, size: 32, color: GrowlyColors.brand),
+              ),
               const SizedBox(width: 18),
               Expanded(
                 child: Column(
